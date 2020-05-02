@@ -3,21 +3,24 @@
 
 #include <QVideoWidget>
 
+
 class VideoWidget : public QVideoWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 public:
-  explicit VideoWidget(QWidget *parent = nullptr):QVideoWidget(parent){}
+    explicit VideoWidget(QWidget *parent = nullptr):QVideoWidget(parent){}
 
-  void mouseDoubleClickEvent(QMouseEvent* e){
-    (void)e;
-    emit sigMouseDoubleClick();
-  }
+    void mouseDoubleClickEvent(QMouseEvent* e);
+    void mousePressEvent(QMouseEvent *e);
+
 
 signals:
-  void sigMouseDoubleClick();
+    void sigMouseDoubleClick();
+    void sigMousePressedInFullScreen();
 
 public slots:
 };
+
+
 
 #endif // VIDEOWIDGET_H

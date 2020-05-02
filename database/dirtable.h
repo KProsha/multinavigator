@@ -2,36 +2,30 @@
 #define DIRTABLE_H
 
 #include "table.h"
-#include "dir.h"
-
-#include "filetable.h"
-
+#include "types/dir.h"
 
 namespace database {
 //==============================================================================
 
-class DirTable : public Table
+class DirTable: public Table
 {
-protected:
-
-  Dir *fromSqlQuery(QSqlQuery* query);
-  void prepareInsertSqlQuery(QSqlQuery* query, Record* record);
-
-  QString getTableCreateQueryText();
 
 public:
-  DirTable();
+    DirTable(DataBase* dataBase);
 
-  QSharedPointer<Dir> addDir(Dir::EType type,
-                             const QString& name,
-                             int parentId,
-                             const QString& comment = "");
+    bool addDirAndGetId(Dir& dir);
 
-  QSharedPointer<Dir> getDir(int id){return  getRecord<Dir>(id);}
-  QList<QSharedPointer<Dir> > getDirList(const QString& name){return getRecords<Dir>(name);}
+    Dir getRootDir();
 
-//  QSharedPointer<Dir>  getRootDir();
-//  bool hasRootDir();
+    Dir getDir(int id);
+    Dir fromSqlQuery(QSharedPointer<QSqlQuery> query);
+
+    int getId(const QString& relativePath);
+protected:
+    QString getTableCreateQueryText() override;
+
+
+
 
 };
 //==============================================================================

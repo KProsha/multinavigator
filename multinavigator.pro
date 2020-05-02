@@ -28,29 +28,44 @@ SOURCES += \
         main.cpp \
         gui/mainwindow.cpp \
     gui/centralwidget.cpp \
-    gui/filterwidget/filterwidget.cpp \
     database/database.cpp \
     options/options.cpp \
     database/tagtable.cpp \
     database/filetable.cpp \
     database/filetagtable.cpp \
-    database/file.cpp \
-    database/filetag.cpp \
-    database/tag.cpp \
     database/dirtable.cpp \
-    database/dir.cpp \
     database/table.cpp \
-    database/record.cpp \
     options/useroptions.cpp \
     options/textvalue.cpp \
-    gui/filterwidget/tagwidget.cpp \
-    gui/filterwidget/resizewidget.cpp \
-
+    gui/tagwidget/tagwidget.cpp \
+    gui/taglistwidget/filetaglistwidget.cpp \
+    backend/appglobal.cpp \
+    gui/taglistwidget/playlisttagwidget.cpp \
+    gui/taglistwidget/taglistwidget.cpp \
+    gui/playlistwidget.cpp \
+    backend/playlistmodel.cpp \
+    gui/controlwidget.cpp \
+    gui/progressbarcontroller.cpp \
+    gui/videowidget.cpp \
+    gui/playlistmanager.cpp \
+    database/types/dir.cpp \
+    database/types/file.cpp \
+    database/types/tag.cpp \
+    database/types/filetag.cpp \
+    database/types/playlist.cpp \
+    database/types/fileplaylist.cpp \
+    database/playlisttable.cpp \
+    database/fileplaylisttable.cpp \
+    gui/scanoptionswidget.cpp \
+    backend/dictionary.cpp \
+    gui/taglistwidget/edittaglistwidget.cpp \
+    gui/tagwidget/edittagwidget.cpp \
+    gui/tagwidget/playtagwidget.cpp \
+    gui/edittagdialog.cpp
 
 HEADERS += \
         gui/mainwindow.h \
     gui/centralwidget.h \
-    gui/filterwidget/filterwidget.h \
     gui/videowidget.h \
     database/database.h \
     options/options.h \
@@ -58,17 +73,33 @@ HEADERS += \
     database/tagtable.h \
     database/filetable.h \
     database/filetagtable.h \
-    database/file.h \
-    database/filetag.h \
-    database/tag.h \
+    database/types/file.h \
+    database/types/filetag.h \
+    database/types/tag.h \
     database/dirtable.h \
-    database/dir.h \
-    database/record.h \
+    database/types/dir.h \
     options/useroptions.h \
     options/textvalue.h \
-    gui/filterwidget/tagwidget.h \
-    gui/filterwidget/resizewidget.h \
-
+    gui/tagwidget/tagwidget.h \
+    gui/taglistwidget/filetaglistwidget.h \
+    backend/appglobal.h \
+    gui/taglistwidget/playlisttagwidget.h \
+    gui/taglistwidget/taglistwidget.h \
+    gui/playlistwidget.h \
+    backend/playlistmodel.h \
+    gui/controlwidget.h \
+    gui/progressbarcontroller.h \
+    gui/playlistmanager.h \
+    database/types/playlist.h \
+    database/types/fileplaylist.h \
+    database/playlisttable.h \
+    database/fileplaylisttable.h \
+    gui/scanoptionswidget.h \
+    backend/dictionary.h \
+    gui/taglistwidget/edittaglistwidget.h \
+    gui/tagwidget/edittagwidget.h \
+    gui/tagwidget/playtagwidget.h \
+    gui/edittagdialog.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

@@ -1,26 +1,19 @@
-#ifndef FILETAGDB_H
-#define FILETAGDB_H
-
-#include "file.h"
-#include "tag.h"
-#include "record.h"
-
-
+#ifndef FILEPLAYLIST_H
+#define FILEPLAYLIST_H
 
 namespace database {
 //==============================================================================
-
-
-class FileTag:public Record
+class FilePlayList
 {
 public:
-  FileTag();
+    FilePlayList();
 
-  int fileId;
-  int tagId;
+protected:
+    int fileId;
+    int playListId;
 
 };
 //==============================================================================
 }
 
-#endif // FILETAGDB_H
+#endif // FILEPLAYLIST_H

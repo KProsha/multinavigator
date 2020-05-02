@@ -6,24 +6,16 @@
 
 class TextValue
 {  
-  QSharedPointer<QSettings> settings;
+    QSharedPointer<QSettings> settings;
 
-  QString getValue(const QString& key);
+public:
+    TextValue(const QString& fileName);
 
-public: 
-  TextValue(const QString& fileName, QObject *parent = nullptr);
+    void setFileName(const QString& fileName);
 
-  static TextValue* I;
+    QString getValue(const QString& key);
 
-  void setFileName(const QString& fileName);
 
-  QString directory(){return getValue("common/Directory");}
-  QString openDirectory(){return getValue("common/OpenDirectory");}
-  QString noDirectory(){return getValue("common/NoDirectory");}
-
-  QString file(){return getValue("common/File");}
-
-  QString filters(){return getValue("common/Filters");}
 };
 
 #endif // TEXTVALUE_H

@@ -6,48 +6,51 @@
 #include <QProcess>
 
 #include "gui/centralwidget.h"
-#include "database/database.h"
-#include "options/options.h"
-#include "options/useroptions.h"
 
 class MainWindow : public QMainWindow
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  Options* options;
-  UserOptions* userOptions;
-  TextValue* textValue;
-  // -----  -----
-  database::DataBase* dataBase;
-
-  // -----  -----
-  bool FullScreen;
-  CentralWidget* centralWidgetI;
-
-  QToolBar* mainToolBar;
-
-  QMenuBar* mainMenu;
-  QMenu* fileMenu;
-  QAction* openDirAction;
-
-  void createActions();
-  void createMenu();
 public:
-  MainWindow(QWidget *parent = nullptr);
-  ~MainWindow();
+    MainWindow(QWidget *parent = nullptr);
+    ~MainWindow();
 
 protected slots:
-  void switchFullScreen();
+    void setState(AppGlobal::EAppState newState);
 
-  void openDir(const QString& name);
+    void openDir(const QString& name);
 
-  void onOpenDirAction();
+    void onOpenDirAction();
+    void onScanDirAction();
+
+    void onGuiAction();
+
+    void onEditTagsAction();
 
 signals:
-  void sigOpenDir(QString name);
+    void sigOpenDir(QString name);
 
+    void sigNewStateAction(AppGlobal::EAppState state);
 
+protected:
+    CentralWidget* centralWidget;
 
+    QToolBar* mainToolBar;
+
+    QMenu* fileMenu;
+    QAction* openDirAction;
+    QAction* scanDirAction;
+
+    QAction* showPlayListAction;
+    QAction* createPlayList;
+//    QAction* playCustomPlayList;
+    QAction* showVideoAction;
+
+    QAction* editTagsAction;
+
+    void createActions();
+    void createToolBar();
+    void createConnections();
 };
 
 #endif // MAINWINDOW_H

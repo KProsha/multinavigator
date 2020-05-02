@@ -1,85 +1,112 @@
 #include "tagtable.h"
 
+#include "backend/appglobal.h"
 
 namespace database {
 //==============================================================================
 
-TagTable::TagTable():Table("tag")
+TagTable::TagTable(DataBase* dataBase):Table(dataBase)
 {
 
 }
 //------------------------------------------------------------------------------
 QString TagTable::getTableCreateQueryText()
 {
-  QString QueryText = QString(
-             "CREATE TABLE %1 (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
-             "Name INTEGER,"
-             "Type INTEGER,"
-             "Comment  TEXT"
-             ")").arg(name);
-     return QueryText;
+    QString QueryText = QStringLiteral("CREATE TABLE tag(id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
+                                       "name TEXT UNIQUE,"
+                                       "type INTEGER"
+                                       ")");
+    return QueryText;
 }
 //------------------------------------------------------------------------------
-void TagTable::prepareInsertSqlQuery(QSqlQuery* query, Record* record)
-{
-  Tag* TagI = static_cast<Tag*>(record);
+Tag TagTable::fromSqlQuery(QSharedPointer<QSqlQuery> query)
+{    
+    Tag res;
 
-  query->prepare(QString("INSERT INTO %1(Name,Type,Comment)  VALUES(?,?,?)").arg(name)
-                );
+    res.setId(query->value(0).toInt());
+    res.setName(query->value(1).toString());
+    res.setType(static_cast<Tag::EType>(query->value(2).toInt()));
 
-  query->addBindValue(TagI->name);
-  query->addBindValue((int)TagI->type);
-  query->addBindValue(TagI->comment);
+    return res;
 }
 //------------------------------------------------------------------------------
-Tag* TagTable::fromSqlQuery(QSqlQuery *query)
+void TagTable::addTag(const QString& name, Tag::EType type)
 {
-  bool ReadOk = true;
-  bool Ok;
-  int Id = query->value(0).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
+    auto query = dataBase->query();
+    query->prepare("INSERT INTO tag(name,type)  VALUES(?,?)");
 
-  QString Name = query->value(1).toString();
+    query->addBindValue(name);
+    query->addBindValue(static_cast<int>(type));
 
-  int Type = query->value(2).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
-
-  QString Comment = query->value(3).toString();
-
-  if(!ReadOk) return nullptr;
-
-  auto RecordI = new Tag();
-  RecordI->id = Id;
-  RecordI->name = Name;
-  RecordI->type = (Tag::EType)Type;
-  RecordI->comment = Comment;
-
-  return RecordI;
-}
-
-//------------------------------------------------------------------------------
-QSharedPointer<Tag> TagTable::addTag(const QString& name, Tag::EType type, const QString& comment)
-{
-  auto TagI = QSharedPointer<Tag>(new Tag());
-  TagI->name    = name;
-  TagI->type    = type;
-  TagI->comment = comment;
-
-  insertRecord(&*TagI,true);
-
-  return TagI;
+    query->exec();
 }
 //------------------------------------------------------------------------------
-bool TagTable::isUnuque(Record* record)
+int TagTable::addTagAndGetId(const QString& name, Tag::EType type)
 {
-  Tag* TagI = static_cast<Tag*>(record);
-  auto RecordList = getRecords<Tag>(TagI->name);
+    int res = -1;
+    auto query = dataBase->query();
+    query->prepare("INSERT INTO tag(name,type)  VALUES(?,?)");
 
-  if(RecordList.isEmpty()) return  true;
+    query->addBindValue(name);
+    query->addBindValue(static_cast<int>(type));
 
-  return false;
+    if(!query->exec()){
+        auto searchIdQuery = sendQuery((QStringLiteral("SELECT id FROM tag WHERE name = \"%1\"").
+                                        arg(name)));
+        if(!searchIdQuery.isNull()  &&  searchIdQuery->first()){
+            bool ok;
+            res = searchIdQuery->value(0).toInt(&ok);
+            if(!ok) res = -1;
+        }
+        return -1;
+    }
+
+    auto lastIdQuery = dataBase->query();
+
+    if(!lastIdQuery->exec(QStringLiteral("SELECT last_insert_rowid();"))){
+        return -1;
+    }
+    lastIdQuery->next();
+    res = lastIdQuery->value(0).toInt();
+
+    return res;
+
 }
+//------------------------------------------------------------------------------
+bool TagTable::renameTag(int tagId, const QString& newName)
+{
+    auto query = dataBase->query();
+    query->prepare("UPDATE tag SET name = ? WHERE id = ?");
 
+    query->addBindValue(newName);
+    query->addBindValue(tagId);
+
+    if(query->exec()) return true;
+
+    return false;
+}
+//------------------------------------------------------------------------------
+void TagTable::deleteTag(int tagId)
+{
+    auto query = dataBase->query();
+    query->prepare("DELETE FROM  tag WHERE id = ?");
+    query->addBindValue(tagId);
+
+    query->exec();
+}
+//------------------------------------------------------------------------------
+QList<Tag> TagTable::getAllTags()
+{
+    QList<Tag> res;
+    auto query = sendQuery(QStringLiteral("SELECT * FROM tag"));
+    if(query.isNull()) return res;
+
+    while (query->next()) {
+        res.append(fromSqlQuery(query));
+    }
+
+    return res;
+}
 
 //==============================================================================
 }

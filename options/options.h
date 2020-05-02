@@ -6,18 +6,18 @@
 class Options: public QSettings
 {
 
-
-
 public:
     Options(const QString& fileName, QObject *parent = nullptr);
 
-    static Options* i;
+    void load();
+    QStringList getSuffixList() const;
+    QString getDatabaseFileName() const;
 
+protected:
+    QStringList suffixList;
     QString databaseFileName;
 
-    QStringList suffixList;
 
-    void load();
 };
 
 #endif // OPTIONS_H

@@ -6,107 +6,170 @@
 #include <QFileDialog>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QActionGroup>
+
+#include "backend/appglobal.h"
+
+#include "scanoptionswidget.h"
+#include "edittagdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
-  : QMainWindow(parent)
+    : QMainWindow(parent)
 {
+    centralWidget = new CentralWidget(this);
 
-  options = new Options("config.ini",this);
-  userOptions = new UserOptions("userconfig.ini",this);
-  textValue = new TextValue("textvalue.ini", this);
+    setCentralWidget(centralWidget);
 
-  dataBase = new database::DataBase(this);
+    createActions();
+    createToolBar();
+    createConnections();
 
-  centralWidgetI = new CentralWidget(this);
+    if(!AppGlobal::i()->getUserOptions()->getRecentDir().isEmpty())
+        sigOpenDir(AppGlobal::i()->getUserOptions()->getRecentDir());
 
-  FullScreen = false;
+    resize(QDesktopWidget().availableGeometry(this).size() * 0.7);
 
-  setCentralWidget(centralWidgetI);
-
-  createActions();
-  createMenu();
-
-  connect(centralWidgetI,&CentralWidget::sigSwitchFullScreen, this, &MainWindow::switchFullScreen);
-  connect(centralWidgetI,&CentralWidget::sigNameOfPlaingMedia, this, &MainWindow::setWindowTitle);
-  connect(database::DataBase::i, &database::DataBase::sigDirUpdateEvent,
-          centralWidgetI->filterWidget,&FilterWidget::updateDirTag);
-
-  if(!userOptions->getRecentDir().isEmpty()) sigOpenDir(userOptions->getRecentDir());
-
-  resize(QDesktopWidget().availableGeometry(this).size() * 0.7);
+    showPlayListAction->trigger();
 }
 //------------------------------------------------------------------------------
 MainWindow::~MainWindow()
 {
-  userOptions->save();
+    AppGlobal::i()->getUserOptions()->save();
 }
 //------------------------------------------------------------------------------
 void MainWindow::createActions()
 {
-    openDirAction = new QAction(TextValue::I->openDirectory());
+    openDirAction = new QAction(AppGlobal::i()->getTextValue("common/OpenDirectory"));
+    scanDirAction = new QAction(AppGlobal::i()->getTextValue("common/ScanDirectory"));
+    //-----  -----
+    QActionGroup* stateActionGroup = new QActionGroup(this);
+    showPlayListAction = stateActionGroup->addAction(AppGlobal::i()->getTextValue("common/showPlayList"));
+    createPlayList  = stateActionGroup->addAction(AppGlobal::i()->getTextValue("common/createPlayList"));
+//    playCustomPlayList = stateActionGroup->addAction(AppGlobal::i()->getTextValue("common/playCustomPlayList"));
+    showVideoAction = stateActionGroup->addAction(AppGlobal::i()->getTextValue("common/showVideo"));
+
+    showPlayListAction->setCheckable(true);
+    createPlayList->setCheckable(true);
+//    playCustomPlayList->setCheckable(true);
+    showVideoAction->setCheckable(true);
+    //-----  -----
+    editTagsAction = new QAction(AppGlobal::i()->getTextValue("tag/Edit"));
+}
+//------------------------------------------------------------------------------
+void MainWindow::createToolBar()
+{
+    mainToolBar = this->addToolBar("");
+    mainToolBar->addAction(openDirAction);
+    mainToolBar->addSeparator();
+    mainToolBar->addAction(scanDirAction);
+    mainToolBar->addSeparator();
+
+    mainToolBar->addAction(showPlayListAction);
+    mainToolBar->addAction(createPlayList);
+//    mainToolBar->addAction(playCustomPlayList);
+    mainToolBar->addAction(showVideoAction);
+    mainToolBar->addSeparator();
+    mainToolBar->addAction(editTagsAction);
+
+}
+//------------------------------------------------------------------------------
+void MainWindow::createConnections()
+{
+    connect(centralWidget,&CentralWidget::sigNameOfPlaingMedia, this, &MainWindow::setWindowTitle);
+
     connect(openDirAction, &QAction::triggered, this, &MainWindow::onOpenDirAction);
+    connect(scanDirAction, &QAction::triggered, this, &MainWindow::onScanDirAction);
     connect(this, &MainWindow::sigOpenDir, this, &MainWindow::openDir);
-    connect(this, &MainWindow::sigOpenDir, centralWidgetI->filterWidget, &FilterWidget::setDirName);
 
+    connect(showVideoAction, &QAction::triggered, this, &MainWindow::onGuiAction);
+    connect(showPlayListAction, &QAction::triggered, this, &MainWindow::onGuiAction);
+//    connect(playCustomPlayList, &QAction::triggered, this, &MainWindow::onGuiAction);
+    connect(createPlayList, &QAction::triggered, this, &MainWindow::onGuiAction);
 
+    connect(editTagsAction, &QAction::triggered, this, &MainWindow::onEditTagsAction);
+
+    connect(this, &MainWindow::sigNewStateAction, AppGlobal::i(), &AppGlobal::setNewState);
+    connect(AppGlobal::i(), &AppGlobal::sigNewState, this, &MainWindow::setState);
 }
 //------------------------------------------------------------------------------
-void MainWindow::createMenu()
+void MainWindow::setState(AppGlobal::EAppState newState)
 {
-  mainMenu = menuBar();
-  fileMenu = mainMenu->addMenu(TextValue::I->file());
-  fileMenu->addAction(openDirAction);
-
-}
-//------------------------------------------------------------------------------
-void MainWindow::switchFullScreen()
-{
-  if(FullScreen){
-    this->showNormal();
-    this->showMaximized();
-    centralWidgetI->setFullScreenMode(false);
-    mainMenu->setVisible(true);
-
-  }else {
-    this->showFullScreen();
-    centralWidgetI->setFullScreenMode(true);
-    mainMenu->setVisible(false);
-
-    //MainMenu->deleteLater();
-
-    //this->setContentsMargins(0,0,0,0);
-
-
-  }
-
-  FullScreen = !FullScreen;
+    if(newState != AppGlobal::StateFullScreen){
+        if(this->isFullScreen()){
+            this->showNormal();
+            this->showMaximized();
+            mainToolBar->setVisible(true);
+        }
+    }else {
+        this->showFullScreen();
+        mainToolBar->setVisible(false);
+    }
 }
 //------------------------------------------------------------------------------
 void MainWindow::onOpenDirAction()
 {
-  QString Dir;
+    QString Dir;
 
-  if(userOptions->getRecentDir().isEmpty()){
-    Dir = QApplication::applicationDirPath();
-  }else{
-    Dir = userOptions->getRecentDir();
-  }
+    if(AppGlobal::i()->getUserOptions()->getRecentDir().isEmpty()){
+        Dir = QApplication::applicationDirPath();
+    }else{
+        Dir = AppGlobal::i()->getUserOptions()->getRecentDir();
+    }
 
-  QString DirName = QFileDialog::getExistingDirectory(this, TextValue::I->openDirectory(),
-                                                      Dir,
-                                                      QFileDialog::ShowDirsOnly
-                                                      | QFileDialog::DontResolveSymlinks);
+    QString DirName = QFileDialog::getExistingDirectory(this, AppGlobal::i()->getTextValue("common/OpenDirectory"),
+                                                        Dir,
+                                                        QFileDialog::ShowDirsOnly
+                                                        | QFileDialog::DontResolveSymlinks);
 
-  emit sigOpenDir(DirName);
+    emit sigOpenDir(DirName);
+}
+//------------------------------------------------------------------------------
+void MainWindow::onScanDirAction()
+{
+    ScanOptionsWidget scanOptionsWidget;
+
+    if(!scanOptionsWidget.exec()) return;
+
+    AppGlobal::i()->scanRootDir();
+    //openDir(AppGlobal::i()->getRootDirPath());
+}
+//------------------------------------------------------------------------------
+void MainWindow::onGuiAction()
+{
+    if(showPlayListAction == sender()){
+        emit sigNewStateAction(AppGlobal::StatePlayList);
+        return;
+    }
+    if(createPlayList == sender()){
+        emit sigNewStateAction(AppGlobal::StateCreatePlayList);
+        return;
+    }
+//    if(playCustomPlayList == sender()){
+//        emit sigNewStateAction(AppGlobal::StatePlayCustomPlayList);
+//        return;
+//    }
+    if(showVideoAction == sender()){
+        emit sigNewStateAction(AppGlobal::StateVideo);
+        return;
+    }
+}
+//------------------------------------------------------------------------------
+void MainWindow::onEditTagsAction()
+{
+    EditTagListDialog scanOptionsWidget;
+    scanOptionsWidget.showMaximized();
+
+    scanOptionsWidget.exec();
 }
 //------------------------------------------------------------------------------
 void MainWindow::openDir(const QString& name)
 {
-  if(name.isEmpty() ) return;
+    if(name.isEmpty() ) return;
 
-  if(!dataBase->openDir(name)) return;
+    if(!AppGlobal::i()->getDataBase()->openDir(name)) return;
+    AppGlobal::i()->setRootDirPath(name);
 
-  userOptions->setRecentDir(name);
-  dataBase->addRootDir(name);
+    setWindowTitle(name);
+    AppGlobal::i()->getUserOptions()->setRecentDir(name);
 }
 

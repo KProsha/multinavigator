@@ -7,47 +7,42 @@
 #include <QMediaPlayer>
 #include <QMediaPlaylist>
 #include <QSplitter>
+#include <QTimer>
 
-#include "filterwidget/filterwidget.h"
 #include "videowidget.h"
+#include "playlistwidget.h"
+#include "backend/appglobal.h"
+#include "controlwidget.h"
+#include "taglistwidget/filetaglistwidget.h"
+#include "taglistwidget/playlisttagwidget.h"
 
 class CentralWidget : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
-  QMediaPlayer* player;
-  QMediaPlaylist* playList;
-
-
-
-  QSplitter* splitter;
-
-  void playFile(const QString& name);
 public:
-  explicit CentralWidget(QWidget *parent = nullptr);  
-
-  VideoWidget* videoWidget;
-  FilterWidget* filterWidget;
-
-  void setFullScreenMode(bool b){
-    if(b){
-      filterWidget->setVisible(false);
-    }else {
-      filterWidget->setVisible(true);
-    }
-
-  }
-
+    explicit CentralWidget(QWidget *parent = nullptr);
 
 signals:
-  void sigSwitchFullScreen();
-  void sigNameOfPlaingMedia(QString );
-
+    void sigNameOfPlaingMedia(QString );
 
 public slots:
+    void setState(AppGlobal::EAppState newState);
 
+protected:
+    VideoWidget* videoWidget;
+    PlaylistWidget* playlistWidget;
+    FileTagListWidget* fileTagListWidget;
+    PlayListTagWidget* playListTagWidget;
+    ControlWidget* controlWidget;
 
+    QMediaPlayer* player;
+    QMediaPlaylist* playList;
 
+    QTimer* hideControlTimer;
+
+public slots:
+    void playFile();
 };
 
 #endif // CENTRALWIDGET_H

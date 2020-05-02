@@ -1,13 +1,11 @@
 #include "filetagtable.h"
 
+#include "backend/appglobal.h"
 
 namespace database {
 //==============================================================================
 
-
-
-
-FileTagTable::FileTagTable():Table("fileTag")
+FileTagTable::FileTagTable(DataBase* dataBase):Table(dataBase)
 {
 
 }
@@ -15,58 +13,60 @@ FileTagTable::FileTagTable():Table("fileTag")
 //------------------------------------------------------------------------------
 QString FileTagTable::getTableCreateQueryText()
 {
-  QString QueryText = QString(
-      "CREATE TABLE %1 (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
-      "FileId  INTEGER,"
-      "TagId   INTEGER"
-      ")").arg(name);
-  return QueryText;
+    QString queryText = QStringLiteral("CREATE TABLE fileTag (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
+                                       "fileId  INTEGER,"
+                                       "tagId   INTEGER,"
+                                       "enable  INTEGER,"
+                                       "UNIQUE (fileId, tagId)"
+                                       ")");
+    return queryText;
 }
 //------------------------------------------------------------------------------
-void FileTagTable::prepareInsertSqlQuery(QSqlQuery* query, Record* record)
+FileTag FileTagTable::fromSqlQuery(QSharedPointer<QSqlQuery> query)
 {
-  FileTag* FileTagI = static_cast<FileTag*>(record);
+    int i = 0;
 
-  query->prepare(QString("INSERT INTO %1(FileId,TagId)  VALUES(?,?)").arg(name)
-                );
+    FileTag record;
 
-  query->addBindValue(FileTagI->fileId);
-  query->addBindValue(FileTagI->tagId);
+    record.setId(query->value(i++).toInt());
+    record.setFileId(query->value(i++).toInt());
+    record.setTagId(query->value(i++).toInt());
+    record.setEnable(query->value(i++).toBool());
 
+    return record;
 }
 //------------------------------------------------------------------------------
-FileTag* FileTagTable::fromSqlQuery(QSqlQuery *query)
-{
-  bool ReadOk = true;
-  bool Ok;
-  int Id = query->value(0).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
+void FileTagTable::toggleFileTag(int fileId, int tagId)
+{    
+    auto query = dataBase->query();
+    query->prepare("INSERT INTO fileTag (fileId,tagId,enable)  VALUES(?,?,1) "
+                   "ON CONFLICT (fileId, tagId) DO UPDATE SET enable = CASE WHEN (enable = 0) THEN 1 ELSE 0 END "
+                   );
 
-  int FileId = query->value(1).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
+    query->addBindValue(fileId);
+    query->addBindValue(tagId);
 
-  int TagId = query->value(2).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
-
-  if(!ReadOk) return nullptr;
-
-  auto RecordI = new FileTag();
-  RecordI->id = Id;
-  RecordI->fileId = FileId;
-  RecordI->tagId = TagId;
-
-  return RecordI;
+    query->exec();
 }
 //------------------------------------------------------------------------------
-QSharedPointer<FileTag> FileTagTable::addFileTag(int fileId, int tagId)
+void FileTagTable::addFileTag(int fileId, int tagId)
 {
-  auto fileTag = QSharedPointer<FileTag>(new FileTag());
-  fileTag->fileId = fileId;
-  fileTag->tagId  = tagId;
+    auto query = dataBase->query();
+    query->prepare("INSERT INTO fileTag (fileId,tagId,enable)  VALUES(?,?,1)");
 
-  insertRecord(&*fileTag);
+    query->addBindValue(fileId);
+    query->addBindValue(tagId);
 
-  return fileTag;
+    query->exec();
+}
+//------------------------------------------------------------------------------
+void FileTagTable::deleteRecord(int tagId)
+{
+    auto query = dataBase->query();
+    query->prepare("DELETE FROM fileTag WHERE tagId = ?");
+    query->addBindValue(tagId);
+
+    query->exec();
 }
 
 

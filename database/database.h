@@ -10,48 +10,76 @@
 #include "tagtable.h"
 #include "dirtable.h"
 
+#include "backend/dictionary.h"
+
 namespace database {
 //==============================================================================
 
 class DataBase : public QObject
 {
-  Q_OBJECT
-
-  QString dirName;
-
-  QSqlDatabase sqlDataBbase;
-
-  QMutex* databaseMutex;
-
-  void configDB();
-
-  int scanSubDir(const QString& name, const QString &parendDirPath = "", int parentDirId = -1);
-//  void read();
+    Q_OBJECT
 public:
-  explicit DataBase(QObject *parent = nullptr);
-  ~DataBase();
+    explicit DataBase(QObject *parent = nullptr);
+    ~DataBase();
 
-  bool openDir(const QString& name);
+    // -----  -----
+    static DataBase* i;
+    // -----  -----
+    bool connect();
+    void disconnect();
 
-  static DataBase* i;
+    QSharedPointer<QSqlQuery> query();
+    QSharedPointer<QSqlQuery> sendQuery(const QString& queryText);
+    bool transaction();
+    bool rollback();
+    bool commit();
+    // -----  -----
+    bool openDir(const QString& name);
+    void scanRootDir(const QString& name);
+    // -----  -----
+    QString getFilePath(int fileId);
+    QString getDirRelativePath(int dirId);
 
-  bool connect();
-  void disconnect();
+    void addTag(const QString& name, Tag::EType type);
+    bool renameTag(int tagId, const QString& newName);
+    void removeTag(int tagId);
+    QList<Tag> getAllTags();
+    QList<Tag> getFileTag(int fileId);
 
-  QSharedPointer<QSqlQuery> sendQuery(const QString& queryText);
+    QList<File> getAllFiles();
+    QList<File> getFilesFromDir(int dirId);
+    QList<File> getFilesWithTags(QList<int> tagList);
 
-  QSharedPointer<FileTable> fileTable;
-  QSharedPointer<TagTable> tagTable;
-  QSharedPointer<FileTagTable> fileTagTable;
-  QSharedPointer<DirTable> dirTable;
-
-  QSqlDatabase& getSqlDataBbase(){return sqlDataBbase;}
-
-  void addRootDir(const QString& name);
-
-
+    void toggleFileTag(int fileId, int tagId);
 signals:
-  void sigDirUpdateEvent(int dirId);
+    void sigTagUpdated();
+    void sigDirUpdated();
+    void sigFileUpdated();
+    void sigFileTagUpdated();
+
+
+protected:
+    QString rootDirPath;
+
+    QSqlDatabase sqlDataBase;
+    QMutex* databaseMutex;
+
+    void configDB();
+    void searchSubDirs(Dir dir, const QString& absolutePath);
+    void searchFiles(Dir dir, const QString& absolutePath);
+    void addAutoTags();
+    //-----  -----
+    QSharedPointer<FileTable> fileTable;
+    QSharedPointer<TagTable> tagTable;
+    QSharedPointer<FileTagTable> fileTagTable;
+    QSharedPointer<DirTable> dirTable;
+
+    friend class TagTable;
+    friend class FileTable;
+    friend class FileTagTable;
+    friend class DirTable;
+    //-----  -----
+    Dictionary dictionary;
 
 };
 //==============================================================================

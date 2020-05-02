@@ -2,7 +2,7 @@
 #define FILETAGTABLE_H
 
 #include "table.h"
-#include "filetag.h"
+#include "types/filetag.h"
 
 #include <QList>
 
@@ -11,19 +11,17 @@ namespace database {
 
 class FileTagTable : public Table
 {
-protected:
 
-  FileTag *fromSqlQuery(QSqlQuery* query);
-  void prepareInsertSqlQuery(QSqlQuery* query, Record* record);
-
-  QString getTableCreateQueryText();
 public:
-  FileTagTable();
+    FileTagTable(database::DataBase* dataBase);
 
-  QSharedPointer<FileTag> addFileTag(int fileId, int tagId);
+    void toggleFileTag(int fileId, int tagId);
+    void addFileTag(int fileId, int tagId);
+    void deleteRecord(int tagId);
 
-
-
+protected:
+    FileTag fromSqlQuery(QSharedPointer<QSqlQuery> query);
+    QString getTableCreateQueryText() override;
 };
 //==============================================================================
 }

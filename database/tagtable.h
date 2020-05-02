@@ -3,7 +3,7 @@
 
 #include "table.h"
 
-#include "tag.h"
+#include "types/tag.h"
 
 #include "dirtable.h"
 
@@ -12,20 +12,24 @@ namespace database {
 
 class TagTable : public Table
 {
+
+
+public:
+    TagTable(database::DataBase* dataBase);
+
+    void addTag(const QString& name, Tag::EType type);
+    int addTagAndGetId(const QString& name, Tag::EType type);
+    bool renameTag(int tagId, const QString& newName);
+    void deleteTag(int tagId);
+
+    QList<Tag> getAllTags();
+
 protected:
 
-  Tag *fromSqlQuery(QSqlQuery* query);
-  void prepareInsertSqlQuery(QSqlQuery* query, Record* record);
+    Tag fromSqlQuery(QSharedPointer<QSqlQuery> query);
+    QString getTableCreateQueryText() override;
 
-  bool isUnuque(Record* record);
-
-  QString getTableCreateQueryText();
-public:
-  TagTable();
-
-  QSharedPointer<Tag> addTag(const QString& name, Tag::EType type, const QString& comment = "");
-
-  QList<QSharedPointer<Tag> > getTagList(){return getRecords<Tag>();}
+    friend class DataBase;
 
 };
 //==============================================================================

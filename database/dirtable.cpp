@@ -5,103 +5,103 @@
 namespace database {
 //==============================================================================
 
-DirTable::DirTable():Table("directory")
+DirTable::DirTable(DataBase* dataBase):Table(dataBase)
 {
 
 }
 //------------------------------------------------------------------------------
 QString DirTable::getTableCreateQueryText()
 {
-  QString QueryText = QString(
-        "CREATE TABLE %1 (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
-        "Name        TEXT,"
-        "Type        INTEGER,"
-        "ParentDirId INTEGER,"
-        "Comment     TEXT"
-        ")").arg(name);
-  return QueryText;
+    QString QueryText = QStringLiteral("CREATE TABLE directory (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
+                                       "name         TEXT,"
+                                       "relativePath TEXT,"
+                                       "type         INTEGER,"
+                                       "parentDirId  INTEGER,"
+                                       "UNIQUE (name,parentDirId)"
+                                       ")");
+    return QueryText;
 }
 //------------------------------------------------------------------------------
-Dir* DirTable::fromSqlQuery(QSqlQuery *query)
+Dir DirTable::fromSqlQuery(QSharedPointer<QSqlQuery> query)
 {
-  bool ReadOk = true;
-  bool Ok;
-  int Id = query->value(0).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
+    int i = 0;
 
-  QString Name = query->value(1).toString();
+    Dir res;
 
-  int Type = query->value(2).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
+    res.setId(query->value(i++).toInt());
+    res.setName(query->value(i++).toString());
+    res.setRelativePath(query->value(i++).toString());
+    res.setType(static_cast<Dir::EType>(query->value(i++).toInt()));
+    res.setParentId(query->value(i++).toInt());
 
-  int ParentId = query->value(3).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
-
-  QString Comment = query->value(4).toString();
-
-  if(!ReadOk) return nullptr;
-
-  auto RecordI = new Dir();
-  RecordI->id = Id;
-  RecordI->name = Name;
-  RecordI->type = (Dir::EType)Type;
-  RecordI->parentId = ParentId;
-  RecordI->comment = Comment;
-
-  return RecordI;
+    return res;
 }
 //------------------------------------------------------------------------------
-void DirTable::prepareInsertSqlQuery(QSqlQuery* query, Record* record)
+int DirTable::getId(const QString& relativePath)
 {
-  Dir* DirI = static_cast<Dir*>(record);
+    auto query = dataBase->query();
+    query->prepare("SELECT id FROM directory WHERE relativePath=?");
+    query->addBindValue(relativePath);
 
-  query->prepare(QString("INSERT INTO %1(Type,Name,ParentDirId,Comment)  VALUES(?,?,?,?)").arg(name)
-                 );
+    if(query->exec() && query->first()){
+        return query->value(0).toInt();
+    }
 
-  query->addBindValue((int)DirI->type);
-  query->addBindValue(DirI->name);
-  query->addBindValue(DirI->parentId);
-  query->addBindValue(DirI->comment);
+    return -1;
 }
 //------------------------------------------------------------------------------
-//QSharedPointer<Dir> DirTable::getRootDir()
-//{
-//  QSharedPointer<Dir> res;
-//  auto query = sendQuery("SELECT * FROM Dir WHERE Type=" + QString::number(Dir::TypeRoot));
-
-//  while (query->next()) {
-//    res = QSharedPointer<Dir>(fromSqlQuery(&*query));
-//  }
-//  return res;
-//}
-////------------------------------------------------------------------------------
-//bool DirTable::hasRootDir()
-//{
-//  auto rootDir = getRootDir();
-
-//  if(rootDir.isNull())return false;
-
-//  return true;
-//}
-
-//------------------------------------------------------------------------------
-QSharedPointer<Dir> DirTable::addDir(Dir::EType type,
-                                     const QString &name,
-                                     int parentId,
-                                     const QString &comment)
+bool DirTable::addDirAndGetId(Dir& dir)
 {
-  auto dir = QSharedPointer<Dir>(new Dir());
-  dir->name = name;
-  dir->type = type;
-  dir->parentId = parentId;
-  dir->comment = comment;
+    auto query = dataBase->query();
 
-  insertRecord(&*dir);
+    query->prepare("INSERT INTO directory(type,name,relativePath,parentDirId)  VALUES(?,?,?,?)");
 
-  return dir;
+    query->addBindValue(static_cast<int>(dir.getType()));
+    query->addBindValue(dir.getName());
+    query->addBindValue(dir.getRelativePath());
+    query->addBindValue(dir.getParentId());
+
+    if(!dataBase->transaction()) return  false;
+
+    if(!query->exec()){
+        dataBase->rollback();
+        //        qDebug() << "Sql insert query : '" << query->lastQuery() << "' error:" << query->lastError().text();
+        return false;
+    }
+
+    auto lastIdQuery = dataBase->query();
+
+    if(!lastIdQuery->exec(QStringLiteral("SELECT last_insert_rowid();"))){
+        dataBase->rollback();
+        //        qDebug() << "Sql query: '" << query->lastQuery() << "' error:" << query->lastError().text();
+        return false;
+    }
+    lastIdQuery->next();
+
+    dir.setId(lastIdQuery->value(0).toInt());
+    dataBase->commit();
+
+    return true;
 }
-
-
+//------------------------------------------------------------------------------
+Dir DirTable::getRootDir()
+{
+    Dir res;
+    auto query = sendQuery("SELECT * FROM directory WHERE type = 1");
+    if(!query.isNull()  &&  query->first())
+        res = fromSqlQuery(query);
+    return res;
+}
+//------------------------------------------------------------------------------
+Dir DirTable::getDir(int id)
+{
+    Dir res;
+    auto query = sendQuery((QString("SELECT * FROM directory WHERE Id = %2").arg(id)));
+    if(!query.isNull()  &&  query->first()){
+        res = fromSqlQuery(query);
+    }
+    return res;
+}
 
 //==============================================================================
 }

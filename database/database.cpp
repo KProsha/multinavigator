@@ -2,175 +2,326 @@
 
 #include <QSqlQuery>
 #include <QDir>
+#include <QSqlError>
+#include <QFileInfo>
 
 #include "options/options.h"
+#include "backend/appglobal.h"
 
-#include <QDebug>
 namespace database {
 //==============================================================================
 DataBase* DataBase::i = nullptr;
 
 DataBase::DataBase(QObject *parent) : QObject(parent)
 {
-  databaseMutex = new QMutex(QMutex::Recursive);
+    fileTable = QSharedPointer<FileTable>(new FileTable(this));
+    tagTable = QSharedPointer<TagTable>(new TagTable(this));
+    fileTagTable = QSharedPointer<FileTagTable>(new FileTagTable(this));
+    dirTable = QSharedPointer<DirTable>(new DirTable(this));
 
-  fileTable = QSharedPointer<FileTable>(new FileTable());
-  tagTable = QSharedPointer<TagTable>(new TagTable());
-  fileTagTable = QSharedPointer<FileTagTable>(new FileTagTable());
-  dirTable = QSharedPointer<DirTable>(new DirTable());
-
-  i = this;
+    i = this;
 }
 //------------------------------------------------------------------------------
 DataBase::~DataBase()
 {  
-  disconnect();
+    sqlDataBase.close();
 }
 //------------------------------------------------------------------------------
-bool DataBase::openDir(const QString& name)
+bool DataBase::openDir(const QString& path)
 {
-  disconnect();
+    sqlDataBase.close();
+    sqlDataBase.removeDatabase(rootDirPath);
 
-  dirName = name;
-  return  connect();
+    rootDirPath = path;
+    bool ok = connect();
+    if(!ok) return false;
+
+    emit sigTagUpdated();
+    emit sigDirUpdated();
+    emit sigFileUpdated();
+    emit sigFileTagUpdated();
+
+    return true;
 }
 //------------------------------------------------------------------------------
 bool DataBase::connect()
 {
+    if(sqlDataBase.isOpen()) return true;
 
-  if(sqlDataBbase.isOpen()) return true;
+    if(!sqlDataBase.isValid())
+    {
+        if(rootDirPath.isEmpty()) return false;
 
-  if(!sqlDataBbase.isValid())
-  {
-    if(dirName.isEmpty()) return false;
+        QFileInfo dataBaseFileInfo(rootDirPath, AppGlobal::i()->getOptions()->getDatabaseFileName());
 
-    QFileInfo dataBaseFileInfo(dirName, Options::i->databaseFileName);
+        sqlDataBase = QSqlDatabase::addDatabase("QSQLITE",rootDirPath);
+        sqlDataBase.setDatabaseName(dataBaseFileInfo.absoluteFilePath());        
+    }
 
-    sqlDataBbase = QSqlDatabase::addDatabase("QSQLITE");
-    sqlDataBbase.setDatabaseName(dataBaseFileInfo.absoluteFilePath());
+    bool ok = sqlDataBase.open();
 
-    configDB();
-  }
+    if(ok){        
 
-  bool ok = sqlDataBbase.open();
+        QSqlQuery query(sqlDataBase);
+        query.exec("PRAGMA encoding = \"UTF-8\";");
 
-  if(ok){
+        query.clear();
 
-    QSqlQuery query(sqlDataBbase);
-    query.exec("PRAGMA encoding = \"UTF-8\";");
+        configDB();
+        //    query.exec("PRAGMA journal_mode = WAL");
+    }
 
-    query.clear();
-    query.exec("PRAGMA journal_mode = WAL");
-  }
-
-  return ok;
+    return ok;
 }
 //------------------------------------------------------------------------------
 void DataBase::disconnect()
-{   
-  QMutexLocker L(databaseMutex);
-  sqlDataBbase.close();
+{
+    sqlDataBase.close();
 }
+//------------------------------------------------------------------------------
+QSharedPointer<QSqlQuery> DataBase::query()
+{
+    return QSharedPointer<QSqlQuery>(new QSqlQuery(sqlDataBase));
+}
+//------------------------------------------------------------------------------
+QSharedPointer<QSqlQuery> DataBase::sendQuery(const QString &queryText)
+{
+    QSharedPointer<QSqlQuery> query =  QSharedPointer<QSqlQuery>(new QSqlQuery(sqlDataBase));
 
-//--------------------------------------------------------------
+    if(!query->exec(queryText)){
+        qDebug() << "Sql query: '" << query->lastQuery() << "' error:" << query->lastError().text();
+    }
+
+    return query;
+}
+//------------------------------------------------------------------------------
+bool DataBase::transaction()
+{
+    return sqlDataBase.transaction();
+}
+//------------------------------------------------------------------------------
+bool DataBase::rollback()
+{
+    return sqlDataBase.rollback();
+}
+//------------------------------------------------------------------------------
+bool DataBase::commit()
+{
+    return sqlDataBase.commit();
+}
+//------------------------------------------------------------------------------
 void DataBase::configDB()
 {
-  QStringList tables = sqlDataBbase.tables();
+    QStringList tables = sqlDataBase.tables();
 
-  if (!tables.contains(fileTable->name)) fileTable->createTable();
-  if (!tables.contains(tagTable->name)) tagTable->createTable();
-  if (!tables.contains(fileTagTable->name)) fileTagTable->createTable();
-  if (!tables.contains(dirTable->name)) dirTable->createTable();
+    if (!tables.contains("file")) fileTable->createTable();
+    if (!tables.contains("tag"))  tagTable->createTable();
+    if (!tables.contains("fileTag")) fileTagTable->createTable();
+    if (!tables.contains("directory"))  dirTable->createTable();
 }
 //------------------------------------------------------------------------------
-void DataBase::addRootDir(const QString &name)
-{
-  QMutexLocker L(databaseMutex);
+void DataBase::scanRootDir(const QString &name)
+{    
+    auto dir = dirTable->getRootDir();
 
-  int Id = scanSubDir(name);
+    if(!dir.isValid()){
 
-  emit sigDirUpdateEvent(Id);
-}
-//------------------------------------------------------------------------------
-int DataBase::scanSubDir(const QString &name, const QString &parendDirPath, int parentDirId)
-{
-  //-----  -----
-  Dir::EType dirType;
-  QString dirName;
-  if(parentDirId != -1){
-    dirType = Dir::TypeSubDir;
-    dirName = name;
-  }else {
-    dirType = Dir::TypeRoot;
-    dirName = "root";
-  }
-
-
-  auto getUniqueDir = [&]() -> QSharedPointer<Dir> {
-    auto dirList = dirTable->getDirList(dirName);
-    foreach (auto dirNamed, dirList) {
-      if(dirNamed->parentId == parentDirId) return dirNamed;
+        dir.setType(Dir::TypeRoot);
+        dir.setName("root");
+        dir.setParentId(-1);
+        dirTable->addDirAndGetId(dir);
     }
-    return QSharedPointer<Dir>(nullptr);
-  };
 
-  auto dir = getUniqueDir();
+    searchFiles(dir, name);
+    searchSubDirs(dir, name);
 
-  if(dir.isNull()){
-      dir = dirTable->addDir(dirType,
-                             dirName,
-                             parentDirId);
-//      auto tag = tagTable->addTag(dir->name,Tag::TypeDir);
-  }
+    if(AppGlobal::i()->getUserOptions()->getUseFileNameAsTag()){
+        addAutoTags();
+        emit sigTagUpdated();
+    }
 
-  QDir dirQt;
-  if(parentDirId != -1)
-    dirQt.setPath(QDir::toNativeSeparators(parendDirPath +"/" + name));
-  else
-    dirQt.setPath(name);
-  //-----  -----
-  QStringList FileEntryList = dirQt.entryList(QDir::Files | QDir::NoDotAndDotDot);
-
-  foreach (QString Entry, FileEntryList) {
-
-    QFileInfo info(QDir::toNativeSeparators(dirQt.absolutePath() +"/" + Entry));
-
-    if(!Options::i->suffixList.contains(info.suffix()))continue;
-
-
-    auto isUniqueFile = [&]() -> bool{
-        auto fileList = fileTable->getFileList(info.fileName());
-        foreach (auto fileNamed, fileList) {
-            if(fileNamed->dirId == dir->id) return false;
-        }
-        return true;
-    };
-
-    if(isUniqueFile() == false) continue;
-
-    fileTable->addFile(info.created(),
-                       info.lastModified(),
-                       QDateTime::currentDateTime(),
-                       info.suffix(),
-                       info.completeBaseName(),
-                       info.size(),
-                       dir->id
-                       );
-
-  };
-  //-----  -----
-
-  QStringList dirEntryList = dirQt.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-
-  foreach (QString entry, dirEntryList) {
-    scanSubDir(entry,
-              dirQt.absolutePath(),
-              dir->id
-              );
-  };
-  return dir->id;
-
+    emit sigFileUpdated();
 }
+//------------------------------------------------------------------------------
+void DataBase::searchSubDirs(database::Dir dir, const QString& absolutePath)
+{
+    //-----  -----
+    QDir dirQt(absolutePath);
+    QStringList dirEntryList = dirQt.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+
+    foreach (QString dirEntry, dirEntryList) {
+        Dir subDir;
+
+        subDir.setType(Dir::TypeSubDir);
+        subDir.setName(dirEntry);
+        subDir.setParentId(dir.getId());
+        subDir.setRelativePath(QDir::toNativeSeparators(dir.getRelativePath() +"/" + subDir.getName()));
+        int id = dirTable->getId(subDir.getRelativePath());
+
+        if(id < 0)
+            dirTable->addDirAndGetId(subDir);
+        else
+            subDir.setId(id);
+
+        QString subDirAbsolutePath = QDir::toNativeSeparators(absolutePath + "/" + dirEntry);
+
+        searchFiles(subDir, subDirAbsolutePath);
+        searchSubDirs(subDir, subDirAbsolutePath);
+    };
+}
+//------------------------------------------------------------------------------
+void DataBase::searchFiles(Dir dir, const QString& absolutePath)
+{
+    if(!transaction()) return;
+    QDir dirQt(absolutePath);
+
+    foreach (QFileInfo info, dirQt.entryInfoList(AppGlobal::i()->getOptions()->getSuffixList(),
+                                                    QDir::Files | QDir::NoDotAndDotDot)) {
+        File file;
+        file.setCreated(info.created());
+        file.setType(info.suffix());
+        file.setName(info.completeBaseName());
+        file.setSize(info.size());
+        file.setDirId(dir.getId());
+
+        fileTable->addFileAndGetId(file);
+
+        if(AppGlobal::i()->getUserOptions()->getUseFileNameAsTag())
+            dictionary.addEntry(file.getName(), file.getId(), true);
+
+        if(AppGlobal::i()->getUserOptions()->getUseDirNameAsTag())
+            dictionary.addEntry(dir.getName(), file.getId(), false);
+
+    }
+    commit();
+}
+//------------------------------------------------------------------------------
+void DataBase::addAutoTags()
+{
+
+    auto autoTags = dictionary.getTagAndFileIds(AppGlobal::i()->getUserOptions()->getFileNameCountForTag());
+
+    if(!transaction()) return;
+
+    for(auto it = autoTags.begin(); it != autoTags.end(); ++it) {
+        int tagId = tagTable->addTagAndGetId(it.key(), Tag::TypeAuto);
+        foreach(int fileId, it.value()){
+            fileTagTable->addFileTag(fileId, tagId);
+        }
+    }
+    commit();
+}
+//------------------------------------------------------------------------------
+QString DataBase::getFilePath(int fileId)
+{
+    auto file = fileTable->getFile(fileId);
+
+    QString dirPath = getDirRelativePath(file.getDirId());
+    QString filePath;
+    if(dirPath.isEmpty()){
+        filePath = QString("%1/%3.%4").arg(rootDirPath).arg(file.getName()).arg(file.getType());
+    }else{
+        filePath = QString("%1%2/%3.%4").arg(rootDirPath).arg(dirPath).arg(file.getName()).arg(file.getType());
+    }
+
+    return filePath;
+}
+//------------------------------------------------------------------------------
+QString DataBase::getDirRelativePath(int dirId)
+{   
+    Dir dir = dirTable->getDir(dirId);
+    if(!dir.isValid()) return "";
+
+    return dir.getRelativePath();
+}
+//------------------------------------------------------------------------------
+QList<database::Tag> database::DataBase::getAllTags()
+{
+    return  tagTable->getAllTags();
+}
+//------------------------------------------------------------------------------
+void DataBase::addTag(const QString& name, Tag::EType type)
+{
+    tagTable->addTag(name, type);
+    emit sigTagUpdated();
+}
+//------------------------------------------------------------------------------
+bool DataBase::renameTag(int tagId, const QString& newName)
+{
+    bool ok = tagTable->renameTag(tagId, newName);
+    if(ok) emit sigTagUpdated();
+    return ok;
+}
+//------------------------------------------------------------------------------
+void DataBase::removeTag(int tagId)
+{
+    fileTagTable->deleteRecord(tagId);
+    tagTable->deleteTag(tagId);
+    emit sigTagUpdated();
+}
+//------------------------------------------------------------------------------
+QList<database::Tag> DataBase::getFileTag(int fileId)
+{
+    QList<Tag> res;
+    auto query = sendQuery(QString("SELECT * FROM tag WHERE Id "
+                                   "IN (SELECT tagId FROM fileTag WHERE fileTag.fileId=%1 AND fileTag.enable <> 0)")
+                           .arg(fileId));
+    if(query.isNull()) return res;
+
+    while (query->next()) {
+        res.append(tagTable->fromSqlQuery(query));
+    }
+    return res;
+}
+//------------------------------------------------------------------------------
+QList<File> DataBase::getAllFiles()
+{
+    return fileTable->getAllFiles();
+}
+//------------------------------------------------------------------------------
+QList<File> DataBase::getFilesFromDir(int dirId)
+{
+    QList<File> res;
+    auto query = sendQuery(QString("SELECT * FROM file Where DirId=%1)")
+                           .arg(dirId));
+    if(query.isNull()) return res;
+
+    while (query->next()) {
+        res.append(fileTable->fromSqlQuery(query));
+    }
+    return res;
+}
+//------------------------------------------------------------------------------
+QList<File> DataBase::getFilesWithTags(QList<int> tagList)
+{
+    QList<File> res;
+
+    QStringList tagListString;
+    foreach (int tag, tagList) {
+        tagListString.append(QString::number(tag));
+    }
+
+    auto query = sendQuery(QString("SELECT * FROM file WHERE Id "
+                                   "IN (SELECT fileId FROM fileTag WHERE fileTag.tagId IN (%1))")
+                           .arg(tagListString.join(',')));
+
+    if(query.isNull()) return res;
+
+    while (query->next()) {
+        res.append(fileTable->fromSqlQuery(query));
+    }
+
+    return res;
+}
+//------------------------------------------------------------------------------
+void DataBase::toggleFileTag(int fileId, int tagId)
+{
+    fileTagTable->toggleFileTag(fileId, tagId);    
+    emit sigFileTagUpdated();
+}
+
+//------------------------------------------------------------------------------
+
 
 //==============================================================================
 }

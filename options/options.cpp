@@ -1,22 +1,27 @@
 #include "options.h"
 
-Options* Options::i = nullptr;
-
 Options::Options(const QString& fileName, QObject *parent):
-  QSettings(fileName,QSettings::IniFormat, parent)
+    QSettings(fileName,QSettings::IniFormat, parent)
 {
-  load();
-
-  i = this;
+    load();
 }
 //------------------------------------------------------------------------------
 void Options::load()
 {
-  databaseFileName = value("File/DatabaseFileName", "database.db").toString();
+    databaseFileName = value("file/DatabaseFileName", "database.db").toString();
 
-  beginGroup("Suffix");
-  suffixList = childKeys();
+    beginGroup("suffix");
+    suffixList = childKeys();
 
-  endGroup();
-
+    endGroup();
+}
+//------------------------------------------------------------------------------
+QStringList Options::getSuffixList() const
+{
+    return suffixList;
+}
+//------------------------------------------------------------------------------
+QString Options::getDatabaseFileName() const
+{
+    return databaseFileName;
 }

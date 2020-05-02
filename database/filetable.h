@@ -5,9 +5,7 @@
 
 #include <QList>
 
-#include "file.h"
-
-//#include "dirtable.h"
+#include "types/file.h"
 
 namespace database {
 //==============================================================================
@@ -15,25 +13,20 @@ class Dir;
 
 class FileTable : public Table
 {
-protected:
-
-  File* fromSqlQuery(QSqlQuery* query);
-  void prepareInsertSqlQuery(QSqlQuery* query, Record* record);
-
-  QString getTableCreateQueryText();
 public:
-  FileTable();
+    FileTable(DataBase* dataBase);
 
-  QSharedPointer<File> addFile(const QDateTime& created,
-                               const QDateTime& lastModified,
-                               const QDateTime& registered,
-                               QString type,
-                               QString  name,
-                               qint64 size,
-                               int dirId,
-                               const QString& comment = "");
+    bool addFile(File& file);
+    bool addFileAndGetId(File& file);
 
-  QList<QSharedPointer<File> > getFileList(const QString& name){return getRecords<File>(name);}
+    QList<File> getAllFiles();
+    File getFile(int id);
+
+    File fromSqlQuery(QSharedPointer<QSqlQuery> query);
+
+protected:
+     QString getTableCreateQueryText() override;
+
 };
 //==============================================================================
 }

@@ -1,13 +1,11 @@
-#include "dir.h"
-
-
+#include "fileplaylist.h"
 
 namespace database {
 //==============================================================================
 
-Dir::Dir():Record ()
+
+FilePlayList::FilePlayList()
 {
-  parent = nullptr;
 
 }
 //==============================================================================

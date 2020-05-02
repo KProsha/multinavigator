@@ -1,137 +1,126 @@
 #include "filetable.h"
 
+#include "backend/appglobal.h"
+
 namespace database {
 //==============================================================================
 
-FileTable::FileTable():Table("file")
+FileTable::FileTable(DataBase* dataBase):Table(dataBase)
 {
 
 }
+
 //------------------------------------------------------------------------------
 QString FileTable::getTableCreateQueryText()
 {
-  QString QueryText = QString(
-        "CREATE TABLE %1 (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
-        "Created TIMESTAMP,"
-        "LastModified TIMESTAMP,"
-        "Registered TIMESTAMP,"
-        "Type     Text,"
-        "Name   Text,"
-        "Size INTEGER,"
-        "DirId INTEGER,"
-        "Comment  TEXT"
-        ")").arg(name);
-  return QueryText;
-}
-//------------------------------------------------------------------------------
-void FileTable::prepareInsertSqlQuery(QSqlQuery* query, Record* record)
-{
-  File* FileI = static_cast<File*>(record);
-
-  query->prepare(QString("INSERT INTO %1(Created,LastModified,Registered,Type,Name,Size,DirId,Comment) "
-                         "VALUES(?,?,?,?,?,?,?,?)").arg(name)
-                 );
-
-  query->addBindValue(FileI->created);
-  query->addBindValue(FileI->lastModified);
-  query->addBindValue(FileI->registered);
-  query->addBindValue(FileI->type);
-  query->addBindValue(FileI->name);
-  query->addBindValue(FileI->size);
-  query->addBindValue(FileI->dirId);
-  query->addBindValue(FileI->comment);
+    QString QueryText = QStringLiteral(
+                "CREATE TABLE file (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
+                "created TIMESTAMP,"
+                "type TEXT,"
+                "name TEXT,"
+                "size INTEGER,"
+                "dirId INTEGER,"
+                "comment TEXT,"
+                "UNIQUE (dirId,name) ON CONFLICT FAIL "
+                ")");
+    return QueryText;
 }
 
 //------------------------------------------------------------------------------
-File* FileTable::fromSqlQuery(QSqlQuery *query)
+File FileTable::fromSqlQuery(QSharedPointer<QSqlQuery> query)
 {
-  bool ReadOk = true;
-  bool Ok;
-  int Id = query->value(0).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
+    int i = 0;
 
-  int i = 0;
-  QDateTime Created = query->value(i++).toDateTime();
-  QDateTime LastModified = query->value(i++).toDateTime();
-  QDateTime Registered = query->value(i++).toDateTime();
+    File res;
 
-  QString Type = query->value(i++).toString();
+    res.setId(query->value(i++).toInt());
+    res.setCreated(query->value(i++).toDateTime());
+    res.setType(query->value(i++).toString());
+    res.setName(query->value(i++).toString());
+    res.setSize(query->value(i++).toInt());
+    res.setDirId(query->value(i++).toInt());
+    res.setComment(query->value(i++).toString());
 
-  QString Name = query->value(i++).toString();
-
-  int Size = query->value(i++).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
-
-  int DirId = query->value(i++).toInt(&Ok);
-  ReadOk = Ok && ReadOk;
-
-  QString Comment = query->value(i++).toString();
-
-  if(!ReadOk) return nullptr;
-
-
-  auto RecordI = new File();
-  RecordI->id = Id;
-  RecordI->name = Name;
-  RecordI->type = Type;
-  RecordI->created = Created;
-  RecordI->lastModified = LastModified;
-  RecordI->registered = Registered;
-  RecordI->size = Size;
-  RecordI->dirId = DirId;
-  RecordI->comment = Comment;
-
-  return RecordI;
+    return res;
 }
 //------------------------------------------------------------------------------
-QSharedPointer<File> FileTable::addFile(const QDateTime &created,
-                                        const QDateTime &lastModified,
-                                        const QDateTime &registered,
-                                        QString type,
-                                        QString  name,
-                                        qint64 size,
-                                        int dirId,
-                                        const QString& comment)
+bool FileTable::addFile(File& file)
 {
-  auto res = QSharedPointer<File>(new File());
-  res->created    = created;
-  res->lastModified = lastModified;
-  res->registered = registered;
-  res->name = name;
-  res->type = type;
-  res->size  = size;
-  res->dirId = dirId;
-  res->comment = comment;
+    auto query = dataBase->query();
+    query->prepare(QStringLiteral("INSERT INTO file(created,type,name,size,dirId,comment) "
+                                  "VALUES(?,?,?,?,?,?) "));
 
-  insertRecord(&*res);
+    query->addBindValue(file.getCreated());
+    query->addBindValue(file.getType());
+    query->addBindValue(file.getName());
+    query->addBindValue(file.getSize());
+    query->addBindValue(file.getDirId());
+    query->addBindValue(file.getComment());
 
-  return res;
+    if(!query->exec()) return  false;
+    return true;
 }
+//------------------------------------------------------------------------------
+bool FileTable::addFileAndGetId(File& file)
+{
+    auto query = dataBase->query();
+    query->prepare(QStringLiteral("INSERT INTO file(created,type,name,size,dirId,comment) "
+                                  "VALUES(?,?,?,?,?,?) "));
 
+    query->addBindValue(file.getCreated());
+    query->addBindValue(file.getType());
+    query->addBindValue(file.getName());
+    query->addBindValue(file.getSize());
+    query->addBindValue(file.getDirId());
+    query->addBindValue(file.getComment());
 
+    if(!query->exec()){
+        auto searchIdQuery = sendQuery((QStringLiteral("SELECT id FROM file WHERE dirId = %1 AND name = \"%2\"").
+                                        arg(file.getDirId())).
+                                        arg(file.getName()));
+        if(!searchIdQuery.isNull()  &&  searchIdQuery->first()){
+            bool ok;
+            file.setId(searchIdQuery->value(0).toInt(&ok));
+            if(!ok) file.setId(-1);
+        }
+
+        return false;
+    }
+
+    auto lastIdQuery = dataBase->query();
+
+    if(!lastIdQuery->exec(QStringLiteral("SELECT last_insert_rowid();"))){
+        return false;
+    }
+    lastIdQuery->next();
+    file.setId(lastIdQuery->value(0).toInt());
+
+    return true;
+}
+//------------------------------------------------------------------------------
+QList<File> FileTable::getAllFiles()
+{
+    QList<File> res;
+    auto query = sendQuery(QStringLiteral("SELECT * FROM file"));
+    if(query.isNull()) return res;
+
+    while (query->next()) {
+        res.append(fromSqlQuery(query));
+    }
+
+    return res;
+}
+//------------------------------------------------------------------------------
+File FileTable::getFile(int id)
+{
+    File res;
+    auto query = sendQuery((QString("SELECT * FROM file WHERE id = %2").arg(id)));
+    if(!query.isNull()  &&  query->first()){
+        res = fromSqlQuery(query);
+    }
+    return res;
+}
 
 //==============================================================================
 }
 
-//------------------------------------------------------------------------------
-//void CAction::fromSqlQuery(const QSqlQuery& query)
-//{
-//    bool ok;
-//    Id = query.value(0).toInt(&ok);
-//    DateTime = query.value(1).toDateTime();
-//    Type     = (CAction::EType)query.value(2).toInt(&ok);
-//    UserId   = query.value(3).toInt(&ok);
-//    ValueId  = query.value(4).toInt(&ok);
-//    Comment  = query.value(5).toString();
-//}
-////------------------------------------------------------------------------------
-//void CAction::prepareInsertQuery(QSqlQuery& query)
-//{
-//    query.prepare("INSERT INTO actions(DateTime, Type, UserId, ValueId, Comment)"
-//                  "VALUES (?, ?, ?, ?, ?)");
-//    query.addBindValue(QDateTime::currentDateTime());
-//    query.addBindValue(Type);
-//    query.addBindValue(UserId);
-//    query.addBindValue(ValueId);
-//    query.addBindValue(Comment);
-//}

@@ -1,5 +1,3 @@
 # multinavigator
 
-Fun project.
-
-under construction
+A program designed for cataloging video files with tagging manually and automatically

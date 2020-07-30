@@ -24,20 +24,24 @@ CentralWidget::CentralWidget(QWidget *parent) : QWidget(parent)
     player->setVideoOutput(videoWidget);
 
     // ----- -----
-    QSplitter* splitter = new QSplitter(Qt::Horizontal,this);
-    splitter->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSplitter* mainSplitter = new QSplitter(Qt::Horizontal,this);
+    mainSplitter->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    splitter->addWidget(videoWidget);
-    splitter->addWidget(playlistWidget);
-    splitter->addWidget(fileTagListWidget);
-    splitter->addWidget(playListTagWidget);
+    QSplitter* videoPlaylistSplitter = new QSplitter(Qt::Vertical,this);
+    videoPlaylistSplitter->addWidget(videoWidget);
+    videoPlaylistSplitter->addWidget(playlistWidget);
+    videoPlaylistSplitter->setSizes({50,50});
 
-    splitter->setSizes({200,200,100,100});
+    mainSplitter->addWidget(fileTagListWidget);
+    mainSplitter->addWidget(videoPlaylistSplitter);
+    mainSplitter->addWidget(playListTagWidget);
+
+    mainSplitter->setSizes({100,400,100});
 
     auto mainLayout = new QVBoxLayout();
     mainLayout->setContentsMargins(0,0,0,0);
 
-    mainLayout->addWidget(splitter);
+    mainLayout->addWidget(mainSplitter);
     mainLayout->addWidget(controlWidget);
 
     setLayout(mainLayout);

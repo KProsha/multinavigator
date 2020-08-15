@@ -1,16 +1,18 @@
-#ifndef EDITTAGWIDGET_H
-#define EDITTAGWIDGET_H
+#ifndef EDITTAGGROUPWIDGET_H
+#define EDITTAGGROUPWIDGET_H
 
 #include <QFrame>
 #include <QLabel>
 #include <QHBoxLayout>
 #include "gui/widgets/idwidget.h"
+#include "database/types/taggroup.h"
 
-class EditTagWidget : public IdWidget<QFrame>
+
+class EditTagGroupWidget : public IdWidget<QFrame>
 {
     Q_OBJECT
 public:
-    explicit EditTagWidget(database::Tag& t, QWidget *parent = nullptr);
+    explicit EditTagGroupWidget(database::TagGroup& t, QWidget *parent = nullptr);
 
 signals:
 
@@ -19,15 +21,11 @@ protected slots:
     void onRemove();
 
     void onTagGroupCheckBox(bool checked);
-    void updateTagGroups();
+
 
 protected:   
     QLabel* nameLabel;
     QHBoxLayout* mainLayout;
-
-    QList<QWidget*> tagGroupWidgets;
-
-
 };
 
-#endif // EDITTAGWIDGET_H
+#endif // EDITTAGGROUPWIDGET_H

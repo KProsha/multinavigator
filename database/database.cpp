@@ -18,6 +18,8 @@ DataBase::DataBase(QObject *parent) : QObject(parent)
     tagTable = QSharedPointer<TagTable>(new TagTable(this));
     fileTagTable = QSharedPointer<FileTagTable>(new FileTagTable(this));
     dirTable = QSharedPointer<DirTable>(new DirTable(this));
+    tagGroupTable = QSharedPointer<TagGroupTable>(new TagGroupTable(this));
+    tagGroupTagTable = QSharedPointer<TagGroupTagTable>(new TagGroupTagTable(this));
 
     i = this;
 }
@@ -40,6 +42,7 @@ bool DataBase::openDir(const QString& path)
     emit sigDirUpdated();
     emit sigFileUpdated();
     emit sigFileTagUpdated();
+    emit sigTagGroupUpdated();
 
     return true;
 }
@@ -118,6 +121,8 @@ void DataBase::configDB()
     if (!tables.contains("tag"))  tagTable->createTable();
     if (!tables.contains("fileTag")) fileTagTable->createTable();
     if (!tables.contains("directory"))  dirTable->createTable();
+    if (!tables.contains("taggroup"))  tagGroupTable->createTable();
+    if (!tables.contains("taggrouptag"))  tagGroupTagTable->createTable();
 }
 //------------------------------------------------------------------------------
 void DataBase::scanRootDir(const QString &name)
@@ -129,14 +134,17 @@ void DataBase::scanRootDir(const QString &name)
         dir.setType(Dir::TypeRoot);
         dir.setName("root");
         dir.setParentId(-1);
-        dirTable->addDirAndGetId(dir);
+        int dirId = dirTable->addDirAndGetId(dir);
+
     }
 
     searchFiles(dir, name);
     searchSubDirs(dir, name);
 
     if(AppGlobal::i()->getUserOptions()->getUseFileNameAsTag()){
-        addAutoTags();
+        int autoTagGroupId = tagGroupTable->addGroupAndGetId(AppGlobal::i()->getTextValue("tag/AutoTagGroup"));
+        int allTagGroupId = tagGroupTable->addGroupAndGetId(AppGlobal::i()->getTextValue("tag/AllTagGroup"));
+        addAutoTags(autoTagGroupId, allTagGroupId);
         emit sigTagUpdated();
     }
 
@@ -196,15 +204,17 @@ void DataBase::searchFiles(Dir dir, const QString& absolutePath)
     commit();
 }
 //------------------------------------------------------------------------------
-void DataBase::addAutoTags()
+void DataBase::addAutoTags(quint64 autoTagGroupId, quint64 allTagGroupId)
 {
-
     auto autoTags = dictionary.getTagAndFileIds(AppGlobal::i()->getUserOptions()->getFileNameCountForTag());
 
     if(!transaction()) return;
 
     for(auto it = autoTags.begin(); it != autoTags.end(); ++it) {
-        int tagId = tagTable->addTagAndGetId(it.key(), Tag::TypeAuto);
+        int tagId = tagTable->addTagAndGetId(it.key());
+        tagGroupTagTable->toggleTagGroupTag(autoTagGroupId, tagId);
+        tagGroupTagTable->toggleTagGroupTag(allTagGroupId, tagId);
+
         foreach(int fileId, it.value()){
             fileTagTable->addFileTag(fileId, tagId);
         }
@@ -240,9 +250,27 @@ QList<database::Tag> database::DataBase::getAllTags()
     return  tagTable->getAllTags();
 }
 //------------------------------------------------------------------------------
-void DataBase::addTag(const QString& name, Tag::EType type)
+QList<Tag> DataBase::getTagList(quint64 tagGroupId)
 {
-    tagTable->addTag(name, type);
+    QList<Tag> res;
+    auto query = sendQuery(QString("SELECT * FROM tag WHERE Id "
+                                   "IN (SELECT tagId FROM taggrouptag WHERE taggrouptag.tagGroupId=%1 AND taggrouptag.enable <> 0)")
+                           .arg(tagGroupId));
+    if(query.isNull()) return res;
+
+    while (query->next()) {
+        res.append(tagTable->fromSqlQuery(query));
+    }
+    return res;
+}
+//------------------------------------------------------------------------------
+void DataBase::addTag(const QString& name)
+{
+    int tagId = tagTable->addTagAndGetId(name);
+    int allTagGroupId = tagGroupTable->addGroupAndGetId(AppGlobal::i()->getTextValue("tag/AllTagGroup"));
+
+    tagGroupTagTable->toggleTagGroupTag(allTagGroupId, tagId);
+
     emit sigTagUpdated();
 }
 //------------------------------------------------------------------------------
@@ -257,6 +285,8 @@ void DataBase::removeTag(int tagId)
 {
     fileTagTable->deleteRecord(tagId);
     tagTable->deleteTag(tagId);
+    tagGroupTagTable->deleteTagGroupTagByTag(tagId);
+
     emit sigTagUpdated();
 }
 //------------------------------------------------------------------------------
@@ -292,26 +322,65 @@ QList<File> DataBase::getFilesFromDir(int dirId)
     return res;
 }
 //------------------------------------------------------------------------------
-QList<File> DataBase::getFilesWithTags(QList<int> tagList)
+QList<File> DataBase::getFilesWithTags(QHash<int, database::Tag::ESelectionType> filterTagList)
 {
     QList<File> res;
 
-    QStringList tagListString;
-    foreach (int tag, tagList) {
-        tagListString.append(QString::number(tag));
-    }
+    auto getFileId = [this](QList<int> tagIdList) -> QSet<quint64> {
+        QSet<quint64> resFileId;
+        if(tagIdList.isEmpty()) return resFileId;
 
-    auto query = sendQuery(QString("SELECT * FROM file WHERE Id "
-                                   "IN (SELECT fileId FROM fileTag WHERE fileTag.tagId IN (%1))")
-                           .arg(tagListString.join(',')));
+        QStringList tagIdStringList;
+        foreach (int id, tagIdList) {
+            tagIdStringList.append(QString::number(id));
+        }
 
-    if(query.isNull()) return res;
+        auto query = sendQuery(QString("SELECT fileId FROM fileTag WHERE fileTag.tagId IN (%1)")
+                               .arg(tagIdStringList.join(',')));
+        bool ok;
+        while (query->next()) {
+            quint64 fileId = query->value(0).toULongLong(&ok);
+            if(ok) resFileId.insert(fileId);
+        }
+        return resFileId;
+    };
 
-    while (query->next()) {
-        res.append(fileTable->fromSqlQuery(query));
-    }
+    QSet<quint64> andSet = getFileId(filterTagList.keys(database::Tag::TypeAnd));
+    QSet<quint64> orSet  = getFileId(filterTagList.keys(database::Tag::TypeOr));
+    QSet<quint64> notSet = getFileId(filterTagList.keys(database::Tag::TypeNot));
+
+    QSet<quint64> fileSet = orSet;
+    if(!andSet.isEmpty()) fileSet = fileSet.intersect(andSet);
+    if(!notSet.isEmpty()) fileSet = fileSet.subtract(notSet);
+
+    res = fileTable->getFileList(fileSet.toList());
 
     return res;
+}
+//------------------------------------------------------------------------------
+QList<TagGroup> DataBase::getAllTagGroups()
+{
+    return tagGroupTable->getAllTagGroupList();
+}
+//------------------------------------------------------------------------------
+QList<quint64> DataBase::getTagGroupsId(quint64 tagGroup)
+{
+    return tagGroupTagTable->getTagGroupsId(tagGroup);
+}
+//------------------------------------------------------------------------------
+void DataBase::removeTagGroup(int id)
+{
+    tagGroupTable->deleteGroup(id);
+    tagGroupTagTable->deleteTagGroupTagByTag(id);
+
+    emit sigTagGroupUpdated();
+}
+//------------------------------------------------------------------------------
+bool DataBase::renameTagGroup(int id, const QString& newName)
+{
+    tagGroupTable->rename(id, newName);
+    emit sigTagGroupUpdated();
+    return true;
 }
 //------------------------------------------------------------------------------
 void DataBase::toggleFileTag(int fileId, int tagId)
@@ -319,7 +388,29 @@ void DataBase::toggleFileTag(int fileId, int tagId)
     fileTagTable->toggleFileTag(fileId, tagId);    
     emit sigFileTagUpdated();
 }
-
+//------------------------------------------------------------------------------
+void DataBase::addTagGroup(const QString& name)
+{
+    tagGroupTable->addGroup(name);
+    emit sigTagGroupUpdated();
+}
+//------------------------------------------------------------------------------
+void DataBase::deleteTagGroup(quint64 id)
+{
+    tagGroupTable->deleteGroup(id);    
+    emit sigTagGroupUpdated();
+}
+//------------------------------------------------------------------------------
+void DataBase::toggleTagGroupTag(quint64 tagGroupId, quint64 tagId, bool enable)
+{
+    tagGroupTagTable->toggleTagGroupTag(tagGroupId, tagId, enable);
+    emit sigTagGroupTagUpdated();
+}
+//------------------------------------------------------------------------------
+//List<quint64> DataBase::getTagsId(quint64 tagGroupId)
+//{
+//    return ;
+//}
 //------------------------------------------------------------------------------
 
 

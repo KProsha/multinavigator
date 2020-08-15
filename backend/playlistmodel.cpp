@@ -61,10 +61,11 @@ void PlayListModel::updatePlaylist()
 {
     beginResetModel();
 
-    if(filterTagIdList.isEmpty())
+    if(filterTagList.isEmpty())
         fileList = AppGlobal::i()->getDataBase()->getAllFiles();
-    else
-        fileList = AppGlobal::i()->getDataBase()->getFilesWithTags(filterTagIdList);
+    else{
+        fileList = AppGlobal::i()->getDataBase()->getFilesWithTags(filterTagList);
+    }
 
     endResetModel();
 }
@@ -93,9 +94,13 @@ int PlayListModel::getCurrentFileIndex() const
     return searchFileIndex(currentFileId);
 }
 //------------------------------------------------------------------------------
-void PlayListModel::setFilterTagIdList(const QList<int>& value)
+void PlayListModel::setTagIdFilter(int id, database::Tag::ESelectionType type)
 {
-    filterTagIdList = value;
+    if(type == database::Tag::NotSelected){
+        filterTagList.remove(id);
+    }else{
+        filterTagList[id] = type;
+    }
     updatePlaylist();
 }
 //------------------------------------------------------------------------------

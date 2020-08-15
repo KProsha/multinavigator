@@ -3,11 +3,17 @@
 #include "options.h"
 
 static const int DEFAULTFILENAMECOUNTFORTAG = 5;
+static const int MAXDISPLAYEDTAGLENGTH = 30;
 
 UserOptions::UserOptions(const QString& fileName, QObject *parent):
     QSettings(fileName,QSettings::IniFormat, parent)
 {
     load();
+}
+//------------------------------------------------------------------------------
+UserOptions::~UserOptions()
+{
+   save();
 }
 //------------------------------------------------------------------------------
 void UserOptions::save()
@@ -16,6 +22,7 @@ void UserOptions::save()
     setValue("scanoptions/useDirNameAsTag", useDirNameAsTag);
     setValue("scanoptions/useFileNameAsTag", useFileNameAsTag);
     setValue("scanoptions/fileNameCountForTag", fileNameCountForTag);
+
 }
 //------------------------------------------------------------------------------
 void UserOptions::load()
@@ -26,6 +33,8 @@ void UserOptions::load()
     useFileNameAsTag = value("scanoptions/useFileNameAsTag", true).toBool();
     fileNameCountForTag = value("scanoptions/fileNameCountForTag", DEFAULTFILENAMECOUNTFORTAG).toInt(&ok);
     if(!ok) fileNameCountForTag = DEFAULTFILENAMECOUNTFORTAG;
+    maxDisplayedTagLength = value("interface/maxDisplayedTagLength", MAXDISPLAYEDTAGLENGTH).toInt(&ok);
+    if(!ok) maxDisplayedTagLength = MAXDISPLAYEDTAGLENGTH;
 }
 //------------------------------------------------------------------------------
 const QString &UserOptions::getRecentDir() const
@@ -76,4 +85,14 @@ bool UserOptions::getUseNumbersAsTag() const
 void UserOptions::setUseNumbersAsTag(bool value)
 {
     useNumbersAsTag = value;
+}
+
+int UserOptions::getMaxDisplayedTagLength() const
+{
+    return maxDisplayedTagLength;
+}
+
+void UserOptions::setMaxDisplayedTagLength(int value)
+{
+    maxDisplayedTagLength = value;
 }

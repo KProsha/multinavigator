@@ -7,7 +7,7 @@ namespace database {
 
 FileTable::FileTable(DataBase* dataBase):Table(dataBase)
 {
-
+    tableName = QStringLiteral("file");
 }
 
 //------------------------------------------------------------------------------
@@ -96,6 +96,26 @@ bool FileTable::addFileAndGetId(File& file)
     file.setId(lastIdQuery->value(0).toInt());
 
     return true;
+}
+//------------------------------------------------------------------------------
+QList<File> FileTable::getFileList(QList<quint64> fileIdList)
+{
+    QList<File> res;
+
+    QStringList idStringList;
+    foreach (quint64 id, fileIdList) {
+        idStringList.append(QString::number(id));
+    }
+
+    auto query = sendQuery(QStringLiteral("SELECT * FROM file WHERE Id IN (%1)")
+                           .arg(idStringList.join(',')));
+    if(query.isNull()) return res;
+
+    while (query->next()) {
+        res.append(fromSqlQuery(query));
+    }
+
+    return res;
 }
 //------------------------------------------------------------------------------
 QList<File> FileTable::getAllFiles()

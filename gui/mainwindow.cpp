@@ -156,7 +156,7 @@ void MainWindow::onGuiAction()
 //------------------------------------------------------------------------------
 void MainWindow::onEditTagsAction()
 {
-    EditTagListDialog scanOptionsWidget;
+    EditTagDialog scanOptionsWidget;
     scanOptionsWidget.showMaximized();
 
     scanOptionsWidget.exec();

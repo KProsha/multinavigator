@@ -47,9 +47,9 @@ void AppGlobal::switchFullScreen()
     }
 }
 //------------------------------------------------------------------------------
-void AppGlobal::setFilterTagIdList(const QList<int>& value)
+void AppGlobal::setTagIdFilter(int id, database::Tag::ESelectionType type)
 {
-    customPlayListModel->setFilterTagIdList(value);
+    customPlayListModel->setTagIdFilter(id, type);
 }
 //------------------------------------------------------------------------------
 void AppGlobal::toggleRandomMode()

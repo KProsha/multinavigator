@@ -60,8 +60,7 @@ signals:
 public slots:
     void setNewState(EAppState newState);
     void switchFullScreen();
-    void setFilterTagIdList(const QList<int>& value);
-
+    void setTagIdFilter(int id, database::Tag::ESelectionType type);
     void toggleRandomMode();
     void toggleRepeatMode();
     void moveForward();

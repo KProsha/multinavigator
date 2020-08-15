@@ -37,11 +37,11 @@ SOURCES += \
     database/table.cpp \
     options/useroptions.cpp \
     options/textvalue.cpp \
-    gui/tagwidget/tagwidget.cpp \
-    gui/taglistwidget/filetaglistwidget.cpp \
+    gui/taglistwidget/filetaggroupwidget.cpp \
     backend/appglobal.cpp \
-    gui/taglistwidget/playlisttagwidget.cpp \
-    gui/taglistwidget/taglistwidget.cpp \
+    gui/taglistwidget/playlisttaggroupwidget.cpp \
+    gui/widgets/listviewwidget.cpp \
+    gui/taglistwidget/taglistgroupwidget.cpp \
     gui/playlistwidget.cpp \
     backend/playlistmodel.cpp \
     gui/controlwidget.cpp \
@@ -59,9 +59,18 @@ SOURCES += \
     gui/scanoptionswidget.cpp \
     backend/dictionary.cpp \
     gui/taglistwidget/edittaglistwidget.cpp \
+    gui/taggroup/edittaggrouplistwidget.cpp \
+    gui/taggroup/edittaggroupwidget.cpp \
     gui/tagwidget/edittagwidget.cpp \
     gui/tagwidget/playtagwidget.cpp \
-    gui/edittagdialog.cpp
+    gui/tagwidget/filetagwidget.cpp \
+    gui/edittagdialog.cpp \
+    database/types/taggroup.cpp \
+    database/types/taggrouptag.cpp \
+    database/taggrouptable.cpp \
+    database/taggrouptagtable.cpp \
+    gui/edittaggrouptab.cpp \
+    gui/edittagtab.cpp
 
 HEADERS += \
         gui/mainwindow.h \
@@ -80,11 +89,11 @@ HEADERS += \
     database/types/dir.h \
     options/useroptions.h \
     options/textvalue.h \
-    gui/tagwidget/tagwidget.h \
-    gui/taglistwidget/filetaglistwidget.h \
+    gui/taglistwidget/filetaggroupwidget.h \
     backend/appglobal.h \
-    gui/taglistwidget/playlisttagwidget.h \
-    gui/taglistwidget/taglistwidget.h \
+    gui/taglistwidget/playlisttaggroupwidget.h \
+    gui/widgets/listviewwidget.h \
+    gui/taglistwidget/taglistgroupwidget.h \
     gui/playlistwidget.h \
     backend/playlistmodel.h \
     gui/controlwidget.h \
@@ -97,9 +106,20 @@ HEADERS += \
     gui/scanoptionswidget.h \
     backend/dictionary.h \
     gui/taglistwidget/edittaglistwidget.h \
+    gui/taggroup/edittaggrouplistwidget.h \
+    gui/taggroup/edittaggroupwidget.h \
     gui/tagwidget/edittagwidget.h \
     gui/tagwidget/playtagwidget.h \
-    gui/edittagdialog.h
+    gui/tagwidget/filetagwidget.h \
+    gui/edittagdialog.h \
+    database/types/taggroup.h \
+    database/types/taggrouptag.h \
+    database/taggrouptable.h \
+    database/taggrouptagtable.h \
+    gui/taglistwidget/taglistwidget.h \
+    gui/widgets/idwidget.h \
+    gui/edittaggrouptab.h \
+    gui/edittagtab.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

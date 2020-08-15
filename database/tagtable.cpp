@@ -13,8 +13,7 @@ TagTable::TagTable(DataBase* dataBase):Table(dataBase)
 QString TagTable::getTableCreateQueryText()
 {
     QString QueryText = QStringLiteral("CREATE TABLE tag(id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"
-                                       "name TEXT UNIQUE,"
-                                       "type INTEGER"
+                                       "name TEXT UNIQUE"
                                        ")");
     return QueryText;
 }
@@ -25,30 +24,27 @@ Tag TagTable::fromSqlQuery(QSharedPointer<QSqlQuery> query)
 
     res.setId(query->value(0).toInt());
     res.setName(query->value(1).toString());
-    res.setType(static_cast<Tag::EType>(query->value(2).toInt()));
 
     return res;
 }
 //------------------------------------------------------------------------------
-void TagTable::addTag(const QString& name, Tag::EType type)
+void TagTable::addTag(const QString& name)
 {
     auto query = dataBase->query();
-    query->prepare("INSERT INTO tag(name,type)  VALUES(?,?)");
+    query->prepare("INSERT INTO tag (name) VALUES(?)");
 
     query->addBindValue(name);
-    query->addBindValue(static_cast<int>(type));
 
     query->exec();
 }
 //------------------------------------------------------------------------------
-int TagTable::addTagAndGetId(const QString& name, Tag::EType type)
+int TagTable::addTagAndGetId(const QString& name)
 {
     int res = -1;
     auto query = dataBase->query();
-    query->prepare("INSERT INTO tag(name,type)  VALUES(?,?)");
+    query->prepare("INSERT INTO tag (name) VALUES(?)");
 
     query->addBindValue(name);
-    query->addBindValue(static_cast<int>(type));
 
     if(!query->exec()){
         auto searchIdQuery = sendQuery((QStringLiteral("SELECT id FROM tag WHERE name = \"%1\"").

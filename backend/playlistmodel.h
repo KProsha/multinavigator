@@ -17,7 +17,7 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
 
-    void setFilterTagIdList(const QList<int>& value);
+    void setTagIdFilter(int id, database::Tag::ESelectionType type);
 
     void moveForward(bool repeat, bool random);
     void moveBackward(bool repeat, bool random);
@@ -35,7 +35,7 @@ signals:
 
 protected:
     QList<database::File> fileList;
-    QList<int> filterTagIdList;
+    QHash<int, database::Tag::ESelectionType> filterTagList;
 
     int currentFileId;
 

@@ -17,8 +17,8 @@ class TagTable : public Table
 public:
     TagTable(database::DataBase* dataBase);
 
-    void addTag(const QString& name, Tag::EType type);
-    int addTagAndGetId(const QString& name, Tag::EType type);
+    void addTag(const QString& name);
+    int addTagAndGetId(const QString& name);
     bool renameTag(int tagId, const QString& newName);
     void deleteTag(int tagId);
 

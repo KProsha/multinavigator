@@ -1,24 +1,26 @@
 #ifndef PLAYTAGWIDGET_H
 #define PLAYTAGWIDGET_H
 
-#include "tagwidget.h"
+#include "gui/widgets/idwidget.h"
 
-class PlayTagWidget : public TagWidget
+#include <QFrame>
+#include <QHBoxLayout>
+
+class PlayTagWidget : public IdWidget<QFrame>
 {    
 Q_OBJECT
 public:
     explicit PlayTagWidget(database::Tag& t, QWidget *parent = nullptr);
-
-    bool isChecked();
-    void setChecked(bool b);
 signals:
-    void sigClicked(int tagId);
-
-protected:
-    QPushButton* tagButton;
+    void sigTagFilterChanged(int id, database::Tag::ESelectionType type);
 
 protected slots:
-    void onClick();
+    void onClick(bool checked);
+
+protected:
+    QPushButton* orButton;
+    QPushButton* andButton;
+    QPushButton* notButton;
 
 };
 

@@ -13,8 +13,8 @@
 #include "playlistwidget.h"
 #include "backend/appglobal.h"
 #include "controlwidget.h"
-#include "taglistwidget/filetaglistwidget.h"
-#include "taglistwidget/playlisttagwidget.h"
+#include "taglistwidget/taglistwidget.h"
+#include "taglistwidget/playlisttaggroupwidget.h"
 
 class CentralWidget : public QWidget
 {
@@ -32,8 +32,8 @@ public slots:
 protected:
     VideoWidget* videoWidget;
     PlaylistWidget* playlistWidget;
-    FileTagListWidget* fileTagListWidget;
-    PlayListTagWidget* playListTagWidget;
+    TagListWidget<FileTagGroupWidget>* fileTagListWidget;
+    TagListWidget<PlayListTagGroupWidget>* playListTagWidget;
     ControlWidget* controlWidget;
 
     QMediaPlayer* player;

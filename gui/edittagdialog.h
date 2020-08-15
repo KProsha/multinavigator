@@ -3,16 +3,11 @@
 
 #include <QDialog>
 
-class EditTagListDialog : public QDialog
+class EditTagDialog : public QDialog
 {
     Q_OBJECT
 public:
-    explicit EditTagListDialog(QWidget *parent = nullptr);
-
-signals:
-
-protected slots:
-    void createNewTag();
+    explicit EditTagDialog(QWidget *parent = nullptr);
 
 protected:
 

@@ -9,6 +9,7 @@ class UserOptions: public QSettings
 
 public:
     UserOptions(const QString& fileName, QObject *parent = nullptr);
+    ~UserOptions();
 
     void save();
     void load();
@@ -28,6 +29,9 @@ public:
     bool getUseNumbersAsTag() const;
     void setUseNumbersAsTag(bool value);
 
+    int getMaxDisplayedTagLength() const;
+    void setMaxDisplayedTagLength(int value);
+
 protected:
     QString recentDir;
 
@@ -35,6 +39,7 @@ protected:
     bool useFileNameAsTag;
     bool useNumbersAsTag;
     int fileNameCountForTag;
+    int maxDisplayedTagLength;
 
 };
 

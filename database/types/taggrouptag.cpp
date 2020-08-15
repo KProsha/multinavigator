@@ -1,45 +1,41 @@
-
-#include "tag.h"
+#include "taggrouptag.h"
 
 namespace database {
 //==============================================================================
 
-QString Tag::getName() const
+TagGroupTag::TagGroupTag()
 {
-    return name;
+
 }
 //------------------------------------------------------------------------------
-void Tag::setName(const QString& value)
-{
-    name = value;
-}
-//------------------------------------------------------------------------------
-Tag::ESelectionType Tag::getSelectionType() const
-{
-    return selectionType;
-}
-//------------------------------------------------------------------------------
-void Tag::setSelectionType(const ESelectionType& value)
-{
-    selectionType = value;
-}
-//------------------------------------------------------------------------------
-int Tag::getId() const
+quint64 TagGroupTag::getId() const
 {
     return id;
 }
 //------------------------------------------------------------------------------
-void Tag::setId(int value)
+void TagGroupTag::setId(const quint64& value)
 {
     id = value;
 }
-
-//==============================================================================
-
-
-
-
-
-
+//------------------------------------------------------------------------------
+quint64 TagGroupTag::getTagGroupId() const
+{
+    return tagGroupId;
+}
+//------------------------------------------------------------------------------
+void TagGroupTag::setTagGroupId(const quint64& value)
+{
+    tagGroupId = value;
+}
+//------------------------------------------------------------------------------
+quint64 TagGroupTag::getTagId() const
+{
+    return tagId;
+}
+//------------------------------------------------------------------------------
+void TagGroupTag::setTagId(const quint64& value)
+{
+    tagId = value;
+}
 //==============================================================================
 }

@@ -1,4 +1,4 @@
-#include "edittagwidget.h"
+#include "edittaggroupwidget.h"
 
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -8,7 +8,7 @@
 
 #include "backend/appglobal.h"
 
-EditTagWidget::EditTagWidget(database::Tag& t, QWidget *parent) : IdWidget<QFrame>(t.getId(), parent)
+EditTagGroupWidget::EditTagGroupWidget(database::TagGroup& t, QWidget *parent) : IdWidget<QFrame>(t.getId(), parent)
 {
     setFrameStyle(QFrame::Panel);
 
@@ -25,19 +25,13 @@ EditTagWidget::EditTagWidget(database::Tag& t, QWidget *parent) : IdWidget<QFram
     mainLayout->addWidget(nameLabel);
     mainLayout->addWidget(removeButton);
     mainLayout->addWidget(renameButton);
-
-    //----- -----
-    updateTagGroups();
     //----- -----
 
-    connect(removeButton, &QPushButton::clicked, this, &EditTagWidget::onRemove);
-    connect(renameButton, &QPushButton::clicked, this, &EditTagWidget::onRename);
-
-    connect(AppGlobal::i()->getDataBase(), &database::DataBase::sigTagGroupUpdated,
-            this, &EditTagWidget::updateTagGroups);
+    connect(removeButton, &QPushButton::clicked, this, &EditTagGroupWidget::onRemove);
+    connect(renameButton, &QPushButton::clicked, this, &EditTagGroupWidget::onRename);
 }
 //------------------------------------------------------------------------------
-void EditTagWidget::onRename()
+void EditTagGroupWidget::onRename()
 {
     bool ok;
     QString text = QInputDialog::getText(this, AppGlobal::i()->getTextValue("tag/Rename"),
@@ -48,50 +42,26 @@ void EditTagWidget::onRename()
                                          &ok);
     if (!ok || text.isEmpty()) return;
 
-    if(!AppGlobal::i()->getDataBase()->renameTag(getId(), text)){
+    if(!AppGlobal::i()->getDataBase()->renameTagGroup(getId(), text)){
         QMessageBox message;
         message.setText(QString("%1 '%2'").arg(AppGlobal::i()->getTextValue("tag/WrongName"), nameLabel->text()));
         message.exec();
     }
 }
 //------------------------------------------------------------------------------
-void EditTagWidget::onRemove()
+void EditTagGroupWidget::onRemove()
 {
-    AppGlobal::i()->getDataBase()->removeTag(getId());
+    AppGlobal::i()->getDataBase()->removeTagGroup(getId());
 }
 //------------------------------------------------------------------------------
-void EditTagWidget::onTagGroupCheckBox(bool checked)
+void EditTagGroupWidget::onTagGroupCheckBox(bool checked)
 {
     auto tagGroupCheckBox = dynamic_cast<IdWidget<QCheckBox>* >(sender());
     if(!tagGroupCheckBox) return;
     AppGlobal::i()->getDataBase()->toggleTagGroupTag(tagGroupCheckBox->getId() ,getId(), checked);
 
 }
-//------------------------------------------------------------------------------
-void EditTagWidget::updateTagGroups()
-{
-    foreach (auto w, tagGroupWidgets) {
-        w->deleteLater();
-    }
-    tagGroupWidgets.clear();
 
-    QList<quint64> enabledTagGroupsId = AppGlobal::i()->getDataBase()->getTagGroupsId(getId());
-
-    foreach (auto i, AppGlobal::i()->getDataBase()->getAllTagGroups()) {
-        auto tagGroupCheckBox = new IdWidget<QCheckBox>(i.getId(), this);
-        tagGroupCheckBox->setText(i.getName());
-        connect(tagGroupCheckBox, &QCheckBox::clicked, this, &EditTagWidget::onTagGroupCheckBox);
-        tagGroupCheckBox->setFixedWidth(150);
-        mainLayout->addWidget(tagGroupCheckBox);
-        tagGroupWidgets.append(tagGroupCheckBox);
-        foreach (quint64 groupId, enabledTagGroupsId) {
-            if(i.getId() == groupId){
-                tagGroupCheckBox->setChecked(true);
-                break;
-            }
-        }
-    }
-}
 
 
 

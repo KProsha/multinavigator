@@ -1,16 +1,21 @@
 #ifndef EDITTAGLISTWIDGET_H
 #define EDITTAGLISTWIDGET_H
 
-#include "taglistwidget.h"
+#include "gui/widgets/listviewwidget.h"
 
-class EditTagListWidget : public TagListWidget
+class EditTagListWidget : public ListViewWidget
 {
     Q_OBJECT
 public:
     explicit EditTagListWidget(QWidget *parent = nullptr);
 
+protected slots:
+    void updateAvaliableTag();
+
+
 protected:
-    void addTagWidget(database::Tag tag) override;
+    void addTagWidget(database::Tag tag);
+    void updateAvaliableTagImpl();
 };
 
 

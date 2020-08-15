@@ -9,25 +9,28 @@ namespace database {
 class Tag
 {
 public:
-    enum EType{
-        TypeAuto  = 0x1,
-        TypeUser = 0x2
-
+    enum ESelectionType{
+        TypeAnd,
+        TypeOr,
+        TypeNot,
+        NotSelected
     };
 
     int getId() const;
     void setId(int value);
 
-    EType getType() const;
-    void setType(const EType& value);
-
     QString getName() const;
     void setName(const QString& value);
 
+    ESelectionType getSelectionType() const;
+    void setSelectionType(const ESelectionType& value);
+
 private:
     int id;
-    EType  type;
     QString name;
+
+    ESelectionType selectionType; // not database
+
 };
 
 //==============================================================================

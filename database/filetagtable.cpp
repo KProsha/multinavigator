@@ -1,6 +1,6 @@
 #include "filetagtable.h"
 
-#include "backend/appglobal.h"
+#include "database.h"
 
 namespace database {
 //==============================================================================

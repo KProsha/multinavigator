@@ -19,6 +19,7 @@ public:
     bool addFile(File& file);
     bool addFileAndGetId(File& file);
 
+    QList<File> getFileList(QList<quint64> fileIdList);
     QList<File> getAllFiles();
     File getFile(int id);
 

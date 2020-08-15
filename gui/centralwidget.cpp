@@ -2,7 +2,6 @@
 
 #include <QMouseEvent>
 #include <QSplitter>
-//#include <QVBoxLayout>
 #include <QFileInfo>
 
 #include "backend/playlistmodel.h"
@@ -11,8 +10,8 @@ CentralWidget::CentralWidget(QWidget *parent) : QWidget(parent)
 {
     videoWidget = new VideoWidget(this);
     playlistWidget = new PlaylistWidget(this);
-    fileTagListWidget = new FileTagListWidget(this);
-    playListTagWidget = new PlayListTagWidget(this);
+    fileTagListWidget = new TagListWidget<FileTagGroupWidget>(this);
+    playListTagWidget = new TagListWidget<PlayListTagGroupWidget>(this);
     controlWidget = new ControlWidget(this);
 
     hideControlTimer = new QTimer(this);
@@ -55,8 +54,6 @@ CentralWidget::CentralWidget(QWidget *parent) : QWidget(parent)
             hideControlTimer,static_cast<void (QTimer:: *)()>( &QTimer::start));
     connect(hideControlTimer, &QTimer::timeout, controlWidget, &ControlWidget::hide);
     connect(videoWidget, &VideoWidget::sigMousePressedInFullScreen, controlWidget, &ControlWidget::show);
-
-    connect(playListTagWidget, &PlayListTagWidget::sigTagSelected, AppGlobal::i(), &AppGlobal::setFilterTagIdList);
 
     // -----  -----
     connect(controlWidget, &ControlWidget::sigSetPosEvent,  player, &QMediaPlayer::setPosition);

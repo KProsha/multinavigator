@@ -1,35 +1,49 @@
-#ifndef TAGLISTWIDGET_H
-#define TAGLISTWIDGET_H
+#ifndef FILETAGLISTWIDGET_H
+#define FILETAGLISTWIDGET_H
 
-#include <QScrollArea>
-#include <QVBoxLayout>
-#include <QLabel>
+#include "gui/widgets/listviewwidget.h"
 
-#include <gui/tagwidget/tagwidget.h>
-#include <database/types/tag.h>
+#include "filetaggroupwidget.h"
+#include "backend/appglobal.h"
 
-class TagListWidget : public QWidget
+class GroupListWidget: public ListViewWidget
 {
     Q_OBJECT
 public:
-    explicit TagListWidget(QWidget *parent = nullptr);
-
-public slots:
-    void updateAvaliableTag();
-
+    explicit GroupListWidget(QWidget *parent = nullptr): ListViewWidget(parent){
+        connect(AppGlobal::i()->getDataBase(), &database::DataBase::sigTagGroupUpdated,
+                this, &GroupListWidget::updateGroups);
+    }
 protected slots:
-    void onTagClicked(int tagId);
-
-protected:
-    QVBoxLayout* tagLayout;
-
-    QWidget* scrollTagListWidget;
-
-    QLabel* tagsLabel;
-    QList<TagWidget*> tagWidgetList;
-
-    virtual void onTagClickedImpl(int tagId){Q_UNUSED(tagId)}
-    virtual void addTagWidget(database::Tag tag);
+    virtual void updateGroups() = 0;
 };
 
-#endif // TAGLISTWIDGET_H
+template<class T>
+class TagListWidget: public GroupListWidget
+{    
+public:
+    explicit TagListWidget(QWidget *parent = nullptr): GroupListWidget(parent){}
+
+protected:
+    void updateGroups() override{
+        foreach (auto widget, widgetList) {
+            widget->deleteLater();
+        }
+        widgetList.clear();
+
+        auto tagGroupList =  AppGlobal::i()->getDataBase()->getAllTagGroups();
+
+        foreach (database::TagGroup tagGroup, tagGroupList) {
+            addNewTagGroup(tagGroup);
+        }
+    }
+
+    void addNewTagGroup(database::TagGroup tagGroup){
+        auto groupWidget = new T(tagGroup, this);
+        dynamicLayout->addWidget(groupWidget);
+        widgetList.append(groupWidget);
+    }
+
+};
+
+#endif // FILETAGLISTWIDGET_H

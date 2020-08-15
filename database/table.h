@@ -20,8 +20,10 @@ public:
     virtual ~Table(){}
 
     void createTable();
+
 protected:
     DataBase* dataBase;
+    QString tableName;
 
     virtual QString getTableCreateQueryText() = 0;
 

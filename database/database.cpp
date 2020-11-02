@@ -25,7 +25,7 @@ DataBase::DataBase(QObject *parent) : QObject(parent)
 }
 //------------------------------------------------------------------------------
 DataBase::~DataBase()
-{  
+{
     sqlDataBase.close();
 }
 //------------------------------------------------------------------------------
@@ -58,12 +58,12 @@ bool DataBase::connect()
         QFileInfo dataBaseFileInfo(rootDirPath, AppGlobal::i()->getOptions()->getDatabaseFileName());
 
         sqlDataBase = QSqlDatabase::addDatabase("QSQLITE",rootDirPath);
-        sqlDataBase.setDatabaseName(dataBaseFileInfo.absoluteFilePath());        
+        sqlDataBase.setDatabaseName(dataBaseFileInfo.absoluteFilePath());
     }
 
     bool ok = sqlDataBase.open();
 
-    if(ok){        
+    if(ok){
 
         QSqlQuery query(sqlDataBase);
         query.exec("PRAGMA encoding = \"UTF-8\";");
@@ -126,7 +126,7 @@ void DataBase::configDB()
 }
 //------------------------------------------------------------------------------
 void DataBase::scanRootDir(const QString &name)
-{    
+{
     auto dir = dirTable->getRootDir();
 
     if(!dir.isValid()){
@@ -238,7 +238,7 @@ QString DataBase::getFilePath(int fileId)
 }
 //------------------------------------------------------------------------------
 QString DataBase::getDirRelativePath(int dirId)
-{   
+{
     Dir dir = dirTable->getDir(dirId);
     if(!dir.isValid()) return "";
 
@@ -385,7 +385,7 @@ bool DataBase::renameTagGroup(int id, const QString& newName)
 //------------------------------------------------------------------------------
 void DataBase::toggleFileTag(int fileId, int tagId)
 {
-    fileTagTable->toggleFileTag(fileId, tagId);    
+    fileTagTable->toggleFileTag(fileId, tagId);
     emit sigFileTagUpdated();
 }
 //------------------------------------------------------------------------------
@@ -397,7 +397,7 @@ void DataBase::addTagGroup(const QString& name)
 //------------------------------------------------------------------------------
 void DataBase::deleteTagGroup(quint64 id)
 {
-    tagGroupTable->deleteGroup(id);    
+    tagGroupTable->deleteGroup(id);
     emit sigTagGroupUpdated();
 }
 //------------------------------------------------------------------------------

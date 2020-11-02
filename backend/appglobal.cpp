@@ -52,10 +52,10 @@ void AppGlobal::setTagIdFilter(int id, database::Tag::ESelectionType type)
     customPlayListModel->setTagIdFilter(id, type);
 }
 //------------------------------------------------------------------------------
-void AppGlobal::toggleRandomMode()
+void AppGlobal::toggleRandomMode(bool b)
 {
-  randomMode = !randomMode;
-  emit sigNewRandomMode(randomMode);
+  randomMode = b;
+//  emit sigNewRandomMode(randomMode);
 }
 //------------------------------------------------------------------------------
 void AppGlobal::toggleRepeatMode()

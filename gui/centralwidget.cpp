@@ -89,25 +89,26 @@ void CentralWidget::setState(AppGlobal::EAppState newState)
     case AppGlobal::StateFullScreen:{
         fileTagListWidget->setVisible(false);
         playListTagWidget->setVisible(false);
-        playlistWidget->setVisible(false);        
+        playlistWidget->setVisible(false);
         controlWidget->setVisible(false);
     }break;
         // -----  -----
-    case AppGlobal::StatePlayList:{        
+    case AppGlobal::StatePlayList:{
         fileTagListWidget->setVisible(true);
         playListTagWidget->setVisible(false);
         playlistWidget->setVisible(true);
         controlWidget->setVisible(true);
+        hideControlTimer->stop();
 
         AppGlobal::i()->setCurrentAllPlayListModel();
     }break;
         // -----  -----
-    case AppGlobal::StateCreatePlayList:{        
+    case AppGlobal::StateCreatePlayList:{
         fileTagListWidget->setVisible(true);
         playListTagWidget->setVisible(true);
         playlistWidget->setVisible(true);
         controlWidget->setVisible(true);
-
+        hideControlTimer->stop();
         AppGlobal::i()->setCurrentCustomPlayListModel();
     }break;
         // -----  -----

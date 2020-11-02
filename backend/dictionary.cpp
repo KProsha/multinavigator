@@ -14,7 +14,7 @@ void Dictionary::clear()
 }
 //------------------------------------------------------------------------------
 void Dictionary::addEntry(const QString& text, int fileId, bool splitText)
-{    
+{
     QSet<QString> tags;
     if(splitText){
         QString regExpText;
@@ -24,14 +24,23 @@ void Dictionary::addEntry(const QString& text, int fileId, bool splitText)
             regExpText = QStringLiteral("[\\(\\)\\s+\\.\\,\\_\\-\\]\\[\\d]");
 
         QStringList words = text.toLower().split(QRegularExpression(regExpText), QString::SkipEmptyParts);
-
+        for(int i = 0; i < words.size();){
+            bool ok;
+            words[i].toInt(&ok);
+            if(!ok && (words[i].length() < 4)){
+                words.removeAt(i);
+            }else{
+                ++i;
+            }
+        }
 
         for(int j = 2; j < words.size(); ++j){
             for(int i = 0; i <= words.size() - j; ++i){
-                tags.insert(words.mid(i, j).join(' '));
+                QStringList tagStringList = words.mid(i, j);
+                tags.insert(tagStringList.join(' '));
             }
         }
-        tags.unite(words.toSet());
+//        tags.unite(words.toSet());  одиночные слова
 
     }else {
         tags.insert(text);
@@ -63,7 +72,7 @@ QMap<QString, QSet<int> > Dictionary::getTagAndFileIds(int minWordCount)
 
         auto useKey = [this, &fileIdSet, &similarTags](QString key)->bool{
             foreach(auto tagName,similarTags){
-                if(tagName == key) continue;
+                if((tagName == key) || !dictionaryData.contains(tagName)) continue;
                 if((dictionaryData[tagName].fileIdList == fileIdSet) &&
                     (tagName.size() > key.size())) return false;
             }

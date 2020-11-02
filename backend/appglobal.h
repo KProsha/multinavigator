@@ -54,14 +54,14 @@ signals:
     void sigNewCurrentFile();
     void sigNewCurrentPlayListModel();
 
-    void sigNewRandomMode(bool);
+//    void sigNewRandomMode(bool);
     void sigNewRepeatMode(bool);
 
 public slots:
     void setNewState(EAppState newState);
     void switchFullScreen();
     void setTagIdFilter(int id, database::Tag::ESelectionType type);
-    void toggleRandomMode();
+    void toggleRandomMode(bool b);
     void toggleRepeatMode();
     void moveForward();
     void moveBackward();

@@ -107,6 +107,8 @@ void PlayListModel::setTagIdFilter(int id, database::Tag::ESelectionType type)
 void PlayListModel::moveForward(bool repeat, bool random)
 {    
     if(random){
+        quint32 randSeed = QDateTime::currentDateTime().secsTo(QDateTime(QDate(2000, 1, 2)));
+        qsrand(randSeed);
         setCurrentFileId(fileList.at(qrand() % fileList.size()).getId());
     }else{
         int index = getCurrentFileIndex();

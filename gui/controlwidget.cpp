@@ -62,7 +62,7 @@ ControlWidget::ControlWidget(QWidget *parent) : QWidget(parent)
 
     connect(randomButton, &QPushButton::clicked, AppGlobal::i(), &AppGlobal::toggleRandomMode);
     connect(repeatButton, &QPushButton::clicked, AppGlobal::i(), &AppGlobal::toggleRepeatMode);
-    connect(AppGlobal::i(), &AppGlobal::sigNewRandomMode, randomButton, &QPushButton::setChecked);
+//    connect(AppGlobal::i(), &AppGlobal::sigNewRandomMode, randomButton, &QPushButton::setChecked);
     connect(AppGlobal::i(), &AppGlobal::sigNewRepeatMode, repeatButton, &QPushButton::setChecked);
 
     connect(forwardButton, &QPushButton::clicked, AppGlobal::i(), &AppGlobal::moveForward);

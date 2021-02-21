@@ -13,6 +13,8 @@ ControlWidget::ControlWidget(QWidget *parent) : QWidget(parent)
                                     QSizePolicy::Fixed,
                                     QSizePolicy::ToolButton);
 
+    muted = false;
+
     playPauseButton = new QPushButton(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay)),"" , this);
     backwardButton = new QPushButton(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaSkipBackward)),"" , this);
     stopButton = new QPushButton(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaStop)),"" , this);
@@ -23,6 +25,11 @@ ControlWidget::ControlWidget(QWidget *parent) : QWidget(parent)
 
     timeLine = new ProgressBarController(this);
     timeLine->setTextVisible(false);
+
+    muteButton = new QPushButton(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaVolume)),"" , this);
+    volumeLevel = new ProgressBarController(this);
+    volumeLevel->setTextVisible(false);
+    volumeLevel->setMaximum(100);
     // -----  -----
     playPauseButton->setToolTip(AppGlobal::i()->getTextValue("control/Play"));
     backwardButton->setToolTip(AppGlobal::i()->getTextValue("control/Backward"));
@@ -41,6 +48,10 @@ ControlWidget::ControlWidget(QWidget *parent) : QWidget(parent)
     randomButton->setSizePolicy(smallIconSizePolicy);
 
     timeLine->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+
+    muteButton->setSizePolicy(smallIconSizePolicy);
+    volumeLevel->setSizePolicy(smallIconSizePolicy);
+
     // -----  -----
     repeatButton->setCheckable(true);
     randomButton->setCheckable(true);
@@ -55,10 +66,14 @@ ControlWidget::ControlWidget(QWidget *parent) : QWidget(parent)
     mainLayout->addWidget(repeatButton);
     mainLayout->addWidget(randomButton);
     mainLayout->addWidget(timeLine);
+    mainLayout->addWidget(muteButton);
+    mainLayout->addWidget(volumeLevel);
 
     connect(timeLine, &ProgressBarController::sigSetPosEvent, this, &ControlWidget::sigSetPosEvent);
     connect(playPauseButton, &QPushButton::clicked, this, &ControlWidget::onPlayPauseButton);
     connect(stopButton, &QPushButton::clicked, this, &ControlWidget::sigStop);
+
+    connect(muteButton, &QPushButton::clicked, this, &ControlWidget::onMuteButton);
 
     connect(randomButton, &QPushButton::clicked, AppGlobal::i(), &AppGlobal::toggleRandomMode);
     connect(repeatButton, &QPushButton::clicked, AppGlobal::i(), &AppGlobal::toggleRepeatMode);
@@ -67,28 +82,8 @@ ControlWidget::ControlWidget(QWidget *parent) : QWidget(parent)
 
     connect(forwardButton, &QPushButton::clicked, AppGlobal::i(), &AppGlobal::moveForward);
     connect(backwardButton, &QPushButton::clicked, AppGlobal::i(), &AppGlobal::moveBackward);
-
-
 }
-//------------------------------------------------------------------------------
-void ControlWidget::setState(ControlWidget::EState newState)
-{
-    state = newState;
-    switch (newState) {
-    case StateStopped:
-        playPauseButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay)));
-        playPauseButton->setToolTip(AppGlobal::i()->getTextValue("control/Play"));
-        break;
-    case StatePlaying:
-        playPauseButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPause)));
-        playPauseButton->setToolTip(AppGlobal::i()->getTextValue("control/Pause"));
-        break;
-    case StatePaused:
-        playPauseButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay)));
-        playPauseButton->setToolTip(AppGlobal::i()->getTextValue("control/Play"));
-        break;
-    }
-}
+
 //------------------------------------------------------------------------------
 void ControlWidget::setTimeLinePos(quint64 pos)
 {
@@ -100,29 +95,69 @@ void ControlWidget::setDuration(quint64 duration)
     timeLine->setMaximum(static_cast<int>(duration));
 }
 //------------------------------------------------------------------------------
-void ControlWidget::onMediaPlayerStateChanged(QMediaPlayer::State state)
+void ControlWidget::onMediaPlayerStateChanged(QMediaPlayer::State newState)
 {
-    switch (state) {
+    state = newState;
+    switch (newState) {
     case QMediaPlayer::StoppedState:
-        setState(StateStopped);
+        playPauseButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay)));
+        playPauseButton->setToolTip(AppGlobal::i()->getTextValue("control/Play"));
         break;
     case QMediaPlayer::PlayingState:
-        setState(StatePlaying);
+        playPauseButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPause)));
+        playPauseButton->setToolTip(AppGlobal::i()->getTextValue("control/Pause"));
         break;
     case QMediaPlayer::PausedState:
-        setState(StatePaused);
+        playPauseButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaPlay)));
+        playPauseButton->setToolTip(AppGlobal::i()->getTextValue("control/Play"));
         break;
     }
+}
+//------------------------------------------------------------------------------
+void ControlWidget::onMediaPlayerMutedChanged(bool value)
+{
+    muted = value;
+    if(value == true)
+        muteButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaVolumeMuted)));
+    else
+        muteButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_MediaVolume)));
+}
+//------------------------------------------------------------------------------
+void ControlWidget::onMuteButton()
+{
+    if(muted)
+        emit sigMute(false);
+    else
+        emit sigMute(true);
+}
+//------------------------------------------------------------------------------
+void ControlWidget::setPlayer(QMediaPlayer* value)
+{
+    player = value;
+    connect(this, &ControlWidget::sigSetPosEvent,  player, &QMediaPlayer::setPosition);
+    connect(this, &ControlWidget::sigPlay,  player, &QMediaPlayer::play);
+    connect(this, &ControlWidget::sigStop,  player, &QMediaPlayer::stop);
+    connect(this, &ControlWidget::sigPause,  player, &QMediaPlayer::pause);
+    connect(this, &ControlWidget::sigMute,  player, &QMediaPlayer::setMuted);
+    connect(volumeLevel, &ProgressBarController::sigSetPosEvent,  player, &QMediaPlayer::setVolume);
+
+    connect(player, &QMediaPlayer::positionChanged, this, &ControlWidget::setTimeLinePos);
+    connect(player, &QMediaPlayer::durationChanged, this, &ControlWidget::setDuration);
+    connect(player, &QMediaPlayer::stateChanged, this, &ControlWidget::onMediaPlayerStateChanged);
+    connect(player, &QMediaPlayer::mutedChanged, this, &ControlWidget::onMediaPlayerMutedChanged);
+    connect(player, &QMediaPlayer::volumeChanged, volumeLevel, &ProgressBarController::setValue);
+
+    volumeLevel->setValue(player->volume());
 }
 //------------------------------------------------------------------------------
 void ControlWidget::onPlayPauseButton()
 {
     switch (state) {
-    case StatePlaying:
+    case QMediaPlayer::PlayingState:
         emit sigPause();
         break;
-    case StateStopped:
-    case StatePaused:
+    case QMediaPlayer::StoppedState:
+    case QMediaPlayer::PausedState:
         emit sigPlay();
         break;
     }

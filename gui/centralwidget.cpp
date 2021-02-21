@@ -21,6 +21,7 @@ CentralWidget::CentralWidget(QWidget *parent) : QWidget(parent)
     // ----- -----
     player = new QMediaPlayer(this,QMediaPlayer::VideoSurface);
     player->setVideoOutput(videoWidget);
+    controlWidget->setPlayer(player);
 
     // ----- -----
     QSplitter* mainSplitter = new QSplitter(Qt::Horizontal,this);
@@ -56,15 +57,7 @@ CentralWidget::CentralWidget(QWidget *parent) : QWidget(parent)
     connect(videoWidget, &VideoWidget::sigMousePressedInFullScreen, controlWidget, &ControlWidget::show);
 
     // -----  -----
-    connect(controlWidget, &ControlWidget::sigSetPosEvent,  player, &QMediaPlayer::setPosition);
-    connect(controlWidget, &ControlWidget::sigPlay,  player, &QMediaPlayer::play);
-    connect(controlWidget, &ControlWidget::sigStop,  player, &QMediaPlayer::stop);
-    connect(controlWidget, &ControlWidget::sigPause,  player, &QMediaPlayer::pause);
 
-    connect(player, &QMediaPlayer::positionChanged, controlWidget, &ControlWidget::setTimeLinePos);
-    connect(player, &QMediaPlayer::durationChanged, controlWidget, &ControlWidget::setDuration);
-    connect(player, &QMediaPlayer::stateChanged, controlWidget, &ControlWidget::onMediaPlayerStateChanged);
-    // -----  -----
 
 }
 //------------------------------------------------------------------------------

@@ -13,14 +13,7 @@ class ControlWidget : public QWidget
 public:
     explicit ControlWidget(QWidget *parent = nullptr);
 
-    enum EState
-    {
-        StateStopped,
-        StatePlaying,
-        StatePaused
-    };
-
-    void setState(EState newState);
+    void setPlayer(QMediaPlayer* value);
 
 signals:
     void sigPlay();
@@ -28,14 +21,22 @@ signals:
     void sigPause();
     void sigSetPosEvent(quint64 pos);
 
-public slots:
+    void sigMute(bool);
+
+protected slots:
     void setTimeLinePos(quint64 pos);
     void setDuration(quint64 duration);
-    void onMediaPlayerStateChanged(QMediaPlayer::State state);
+    void onMediaPlayerStateChanged(QMediaPlayer::State newState);
+    void onMediaPlayerMutedChanged(bool value);
 
+    void onMuteButton();
 
 protected:
-    EState state;
+    QMediaPlayer* player;
+
+    QMediaPlayer::State state;
+
+    bool muted;
 
     QPushButton* playPauseButton;
     QPushButton* backwardButton;
@@ -46,6 +47,10 @@ protected:
     QPushButton* randomButton;
 
     ProgressBarController* timeLine;
+
+    QPushButton* muteButton;
+    ProgressBarController* volumeLevel;
+
 protected slots:
     void onPlayPauseButton();
 
